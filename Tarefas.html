@@ -1,0 +1,2985 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TerraZoo — Gerenciador de Tarefas</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Calibri:wght@300;400;600&display=swap');
+
+:root {
+  --v1: #1a2e1f;
+  --v2: #2E7D32;
+  --v3: #4CAF50;
+  --v4: #A5D6A7;
+  --v5: #b2dfc4;
+  --v6: #E8F5E9;
+  --txt: #111;
+  --muted: #555;
+  --borda: #C8E6C9;
+  --fundo: #f4f8f5;
+  --danger: #d32f2f;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+* { scrollbar-width: thin; scrollbar-color: #e9f3ea transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: #e9f3ea; border-radius: 8px; border: 1px solid var(--borda);
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--v4); }
+body {
+  font-family: 'Calibri', 'Segoe UI', sans-serif;
+  background: var(--fundo);
+  color: var(--txt);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--v1);
+  min-height: 64px;
+  padding: 10px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 200;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+}
+.logo { font-size: 24px; font-weight: 600; color: #fff; }
+.logo span { color: var(--v4); }
+.header-brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; }
+input.header-search[type=text] {
+  font-family: inherit; font-size: 12.5px; padding: 7px 10px; width: 170px; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.18); border-radius: 7px;
+  background: rgba(255,255,255,0.08); color: #fff;
+}
+.header-search::placeholder { color: rgba(255,255,255,0.5); }
+.btn-header {
+  font-family: inherit; font-size: 12.5px; font-weight: 600; padding: 7px 12px;
+  border-radius: 7px; border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06); color: #fff; cursor: pointer; white-space: nowrap;
+  transition: all .15s;
+}
+.btn-header:hover { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.35); }
+.btn-header-primary { background: var(--v3); border-color: var(--v3); color: #0d1a10; }
+.btn-header-primary:hover { background: #66bb6a; }
+
+.btn-config-watermark {
+  position: fixed; right: 18px; bottom: 14px; z-index: 250;
+  background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer;
+  opacity: 0.25; filter: grayscale(1); transition: opacity .15s, filter .15s;
+  padding: 6px;
+}
+.btn-config-watermark:hover { opacity: 0.85; filter: grayscale(0); }
+.header-tag { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.4); }
+.sync-status {
+  font-size: 12px; font-weight: 600; letter-spacing: .3px;
+  padding: 6px 12px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--v1); background: var(--v6); border: 1px solid var(--borda);
+}
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #999; flex-shrink: 0; }
+.sync-dot.on { background: var(--v3); box-shadow: 0 0 0 3px rgba(76,175,80,0.25); }
+.sync-dot.off { background: #ffb74d; }
+.avatar-sm {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--v3); color: #fff; font-size: 10px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* ── SIDEBAR (maximizada: ícone + rótulo | minimizada: só ícone) ── */
+.app-layout { display: flex; flex: 1; }
+.sidebar {
+  width: 240px; flex-shrink: 0; background: #fff;
+  border-right: 1px solid var(--borda);
+  display: flex; flex-direction: column;
+  transition: width .18s ease;
+}
+.sidebar.collapsed { width: 72px; }
+
+.sidebar-top { padding: 12px 10px; }
+.sidebar-toggle {
+  width: 38px; height: 38px; border: none; background: none; border-radius: 8px;
+  font-size: 17px; color: var(--v1); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: background .15s;
+}
+.sidebar-toggle:hover { background: var(--v6); }
+
+.sidebar-nav { flex: 1; padding: 4px 10px 10px; }
+.sidebar:not(.collapsed) .sidebar-nav { overflow-y: auto; }
+.sidebar.collapsed .sidebar-nav { overflow: visible; }
+.sidebar-nav-item { position: relative; margin-bottom: 2px; }
+.sidebar-nav-row {
+  display: flex; align-items: center; gap: 12px; padding: 10px 10px;
+  border-radius: 8px; cursor: pointer; color: var(--v1); font-size: 14px; font-weight: 600;
+  transition: background .15s;
+}
+.sidebar-nav-row:hover { background: var(--v6); }
+.sidebar-nav-item.expanded > .sidebar-nav-row { background: var(--v6); }
+.sidebar-nav-row.view-active { background: var(--v2); color: #fff; }
+.sidebar-nav-row.view-active .sidebar-nav-icon { color: #fff; }
+.sidebar-nav-icon {
+  width: 26px; height: 26px; flex-shrink: 0; position: relative;
+  display: flex; align-items: center; justify-content: center; color: var(--v2);
+}
+.sidebar-nav-icon svg { width: 22px; height: 22px; }
+.sidebar-nav-item.has-filter .sidebar-nav-icon::after {
+  content: ''; position: absolute; top: -1px; right: -2px;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--v3);
+  box-shadow: 0 0 0 2px #fff;
+}
+.sidebar-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+
+/* sub itens em cascata (acordeão quando maximizada) */
+.sidebar-sub-title {
+  display: none; font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--v2); margin-bottom: 6px;
+}
+.sidebar-sub {
+  max-height: 0; overflow: hidden; padding-left: 38px;
+  transition: max-height .2s ease;
+}
+.sidebar-nav-item.expanded .sidebar-sub {
+  max-height: 45vh; overflow-y: auto; padding-top: 2px; padding-bottom: 4px; padding-right: 4px;
+}
+.sidebar-list { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 7px;
+  font-size: 12.5px; font-weight: 500; color: var(--txt); cursor: pointer; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar-item:hover { background: var(--v6); }
+.sidebar-item.active { background: var(--v2); color: #fff; font-weight: 600; }
+.sidebar-item-child { padding-left: 24px; }
+.sidebar-item-action { color: var(--v2); font-weight: 700; }
+.sidebar-item-action:hover { background: var(--v6); }
+
+.sidebar-nav-icon.sidebar-add-icon {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--v4); color: var(--v1);
+  font-size: 20px; font-weight: 800;
+}
+
+.sidebar-search-input {
+  flex: 1; min-width: 0; border: none; background: transparent;
+  font-family: inherit; font-size: 13.5px; color: var(--txt); padding: 4px 0;
+}
+.sidebar-search-input:focus { outline: none; }
+.sidebar-search-input::placeholder { color: var(--muted); }
+.sidebar.collapsed .sidebar-search-input { display: none; }
+.sidebar.collapsed .sidebar-search-row { cursor: pointer; }
+.sidebar-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── SIDEBAR MINIMIZADA: rótulos somem, sub itens viram flyout ao passar o mouse ── */
+.sidebar.collapsed .sidebar-nav-label { display: none; }
+.sidebar.collapsed .sidebar-nav-row { justify-content: center; padding: 10px 0; }
+.sidebar.collapsed .sidebar-nav-icon { width: 30px; height: 30px; }
+.sidebar.collapsed .sidebar-nav-icon svg { width: 24px; height: 24px; }
+.sidebar.collapsed .sidebar-sub {
+  display: block; max-height: 70vh; overflow-y: auto; padding-left: 0;
+  position: absolute; top: 0; left: 62px; width: 224px;
+  background: #fff; border: 1px solid var(--borda); border-radius: 10px;
+  box-shadow: 8px 10px 30px rgba(0,0,0,0.2); padding: 12px 12px 14px;
+  opacity: 0; pointer-events: none; transform: translateX(-8px);
+  transition: opacity .15s ease, transform .15s ease; z-index: 300;
+}
+.sidebar.collapsed .sidebar-nav-item:hover .sidebar-sub {
+  opacity: 1; pointer-events: auto; transform: translateX(0);
+}
+.sidebar.collapsed .sidebar-sub-title { display: block; }
+.sidebar.collapsed .sidebar-item { font-size: 13px; padding: 7px 10px; }
+
+/* ── USUÁRIO NO RODAPÉ DA SIDEBAR ── */
+.sidebar-user {
+  display: flex; align-items: center; gap: 10px; padding: 14px; position: relative;
+  border-top: 1px solid var(--borda); cursor: pointer; transition: background .15s;
+}
+.sidebar-user:hover { background: var(--v6); }
+.sidebar-user-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  background: var(--v4); color: var(--v1); font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.sidebar-user-name {
+  font-size: 13px; font-weight: 600; color: var(--v1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar.collapsed .sidebar-user { justify-content: center; padding: 14px 0; }
+.sidebar.collapsed .sidebar-user-name { display: none; }
+
+.sidebar-user-menu {
+  display: none; position: absolute; bottom: calc(100% + 6px); left: 14px; min-width: 190px;
+  background: #fff; border: 1px solid var(--borda); border-radius: 10px;
+  box-shadow: 8px -10px 30px rgba(0,0,0,0.2); padding: 8px; z-index: 300; cursor: default;
+}
+.sidebar-user-menu.open { display: block; }
+.sidebar-user-menu-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 2px 4px 8px; margin-bottom: 6px; border-bottom: 1px solid var(--borda);
+  font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted);
+}
+.sidebar-user-menu-header button {
+  background: none; border: none; cursor: pointer; font-size: 13px; color: var(--muted); padding: 2px;
+}
+.sidebar-user-menu-header button:hover { color: var(--v1); }
+.sidebar-user-menu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  background: none; border: none; padding: 8px 10px; border-radius: 7px;
+  font-family: inherit; font-size: 13px; font-weight: 600; color: var(--danger); cursor: pointer;
+}
+.sidebar-user-menu-item:hover { background: #fdecea; }
+
+.board-title-bar {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 18px; flex-wrap: wrap;
+}
+.board-title-row { font-size: 20px; font-weight: 600; color: var(--v1); }
+.priority-filter { position: relative; }
+.priority-filter-trigger {
+  display: flex; align-items: center; gap: 6px; font-family: inherit; font-size: 12px;
+  font-weight: 500; padding: 5px 10px; border: 1px solid var(--borda); border-radius: 6px;
+  background: #fff; color: var(--txt); cursor: pointer; user-select: none;
+  transition: border-color .15s; white-space: nowrap;
+}
+.priority-filter-trigger:hover { border-color: var(--v3); }
+.priority-filter.open .priority-filter-trigger { border-color: var(--v2); }
+.priority-filter-chevron { width: 12px; height: 12px; flex-shrink: 0; color: var(--v2); transition: transform .15s; }
+.priority-filter.open .priority-filter-chevron { transform: rotate(180deg); }
+.priority-filter-panel {
+  display: none; position: absolute; top: calc(100% + 6px); left: 0; min-width: 190px;
+  background: #fff; border: 1px solid var(--borda); border-radius: 10px;
+  box-shadow: 8px 10px 30px rgba(0,0,0,0.2); padding: 8px; z-index: 300;
+}
+.priority-filter.open .priority-filter-panel { display: block; }
+.priority-filter-item.active { background: var(--v2); color: #fff; font-weight: 600; }
+.btn {
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  padding: 8px 14px; border-radius: 7px; border: 1px solid var(--borda);
+  background: #fff; color: var(--v1); cursor: pointer; transition: all .15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: var(--v3); background: var(--v6); }
+.btn-primary { background: var(--v2); border-color: var(--v2); color: #fff; }
+.btn-primary:hover { background: var(--v3); color: var(--v1); }
+.btn-danger { background: #fff; border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover { background: #fdecea; }
+.btn-sm { padding: 4px 9px; font-size: 12px; }
+.btn-icon { padding: 6px 9px; }
+
+/* ── BOARD ── */
+.board-wrap { flex: 1; overflow-x: auto; padding: 20px 32px 32px; }
+.board { display: flex; gap: 16px; align-items: flex-start; }
+.column {
+  background: #e9f3ea; border-radius: 12px; width: 288px; flex-shrink: 0;
+  display: flex; flex-direction: column; height: fit-content; align-self: flex-start;
+  max-height: calc(100vh - 190px);
+  border: 1px solid var(--borda);
+}
+.column.col-drag-over { outline: 2px dashed var(--v3); outline-offset: -2px; }
+.column-header {
+  padding: 12px 14px 8px; display: flex; align-items: center; gap: 8px;
+  cursor: grab;
+}
+.column-header input.col-name {
+  font-size: 14px; font-weight: 600; color: var(--v1); border: none; background: transparent;
+  flex: 1; min-width: 0; font-family: inherit; padding: 2px 4px; border-radius: 5px;
+}
+.column-header input.col-name:hover, .column-header input.col-name:focus { background: rgba(255,255,255,0.6); outline: none; }
+.col-count {
+  font-size: 11px; font-weight: 600; color: var(--v2); background: rgba(76,175,80,0.15);
+  border-radius: 10px; padding: 2px 8px; flex-shrink: 0;
+}
+.col-count.col-count-over { color: var(--danger); background: rgba(211,47,47,0.15); }
+.column.wip-over { border-color: var(--danger); }
+.col-final-flag { font-size: 12px; }
+.col-menu-btn { background: none; border: none; cursor: pointer; font-size: 15px; color: var(--muted); padding: 2px 4px; }
+.column-body { flex: 1; overflow-y: auto; padding: 4px 10px 10px; display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
+.column-footer { padding: 6px 10px 12px; }
+.add-card-btn {
+  width: 100%; text-align: left; background: none; border: none; color: var(--muted);
+  font-family: inherit; font-size: 13px; padding: 6px 6px; border-radius: 6px; cursor: pointer;
+}
+.add-card-btn:hover { background: rgba(255,255,255,0.6); color: var(--v1); }
+
+/* ── CARD ── */
+.card {
+  background: #fff; border-radius: 9px; padding: 12px 12px 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: grab; border-left: 4px solid var(--v3);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.card.dragging { opacity: 0.35; }
+.card.overdue { background: #fdf2f2; }
+.card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag {
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+  color: #fff; letter-spacing: .3px;
+}
+.tag-outline { background: transparent !important; border: 1.3px solid; }
+.card-title { font-size: 13.5px; font-weight: 600; color: var(--v1); line-height: 1.35; }
+.card-footer-row { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+.card-meta-left { display: flex; align-items: center; gap: 8px; }
+.card-due { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 3px; }
+.card.overdue .card-due { color: var(--danger); font-weight: 700; }
+.card-actions { display: flex; gap: 5px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.card:hover .card-actions { opacity: 1; pointer-events: auto; }
+.card-actions button {
+  background: var(--v6); border: none; color: var(--v2); cursor: pointer;
+  padding: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  opacity: .9; transition: all .15s;
+}
+.card-actions button svg { width: 15px; height: 15px; }
+.card-actions button:hover { background: var(--v3); color: #fff; opacity: 1; }
+.card-assignee-row { font-size: 12px; font-weight: 600; color: var(--v1); display: flex; align-items: center; gap: 5px; }
+.card-assignee-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(10,20,12,0.55); display: none;
+  align-items: flex-start; justify-content: center; z-index: 1000; padding: 40px 16px; overflow-y: auto;
+}
+.modal-overlay.open { display: flex; }
+
+/* ── LOGIN (tela cheia, fora do padrão branco dos demais modais) ── */
+.login-overlay { background: var(--v2); align-items: center; }
+.login-card {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 18px; padding: 40px 36px; width: 100%; max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35); text-align: center;
+}
+.login-logo { font-size: 30px; font-weight: 600; color: #fff; }
+.login-logo span { color: var(--v4); }
+.login-tagline {
+  font-size: 11.5px; letter-spacing: 2.5px; text-transform: uppercase;
+  color: rgba(255,255,255,0.55); margin-top: 6px;
+}
+.login-divider { height: 1px; background: rgba(255,255,255,0.18); margin: 22px 0; }
+.login-heading { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 20px; }
+.login-field { text-align: left; margin-bottom: 16px; }
+.login-field label {
+  display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 6px;
+}
+#modalIdentidade .login-field input {
+  width: 100%; font-family: inherit; font-size: 14px; padding: 11px 14px;
+  border-radius: 9px; border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(0,0,0,0.18); color: #fff;
+}
+#modalIdentidade .login-field input::placeholder { color: rgba(255,255,255,0.45); }
+#modalIdentidade .login-field input:focus { outline: none; border-color: rgba(255,255,255,0.5); }
+.login-remember {
+  display: flex; align-items: center; gap: 8px; margin: 2px 0 18px; cursor: pointer;
+  font-size: 12.5px; color: rgba(255,255,255,0.75); user-select: none;
+}
+.login-remember input[type=checkbox] {
+  width: 15px; height: 15px; accent-color: #fff; cursor: pointer; margin: 0;
+}
+.login-submit {
+  width: 100%; font-family: inherit; font-size: 14.5px; font-weight: 700;
+  padding: 13px; border: none; border-radius: 9px; background: #fff; color: var(--v2);
+  cursor: pointer; margin-top: 8px; transition: background .15s;
+}
+.login-submit:hover { background: var(--v6); }
+
+.modal {
+  background: #fff; border-radius: 14px; width: 100%; max-width: 560px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+}
+.modal.modal-lg { max-width: 720px; }
+.modal-header {
+  padding: 18px 22px; background: var(--v1); color: #fff;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-header h3 { font-size: 17px; font-weight: 600; }
+.modal-close { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; opacity: .7; }
+.modal-close:hover { opacity: 1; }
+.modal-body { padding: 20px 22px; max-height: 65vh; overflow-y: auto; }
+.modal-footer { padding: 14px 22px; border-top: 1px solid var(--borda); display: flex; justify-content: flex-end; gap: 8px; }
+.form-group { margin-bottom: 14px; }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+label { display: block; font-size: 12px; font-weight: 600; color: var(--v1); margin-bottom: 5px; letter-spacing: .2px; }
+input[type=text], input[type=email], input[type=date], input[type=tel], input[type=color], select, textarea {
+  width: 100%; font-family: inherit; font-size: 13.5px; padding: 8px 10px;
+  border: 1px solid var(--borda); border-radius: 7px; background: #fff; color: var(--txt);
+}
+textarea { resize: vertical; min-height: 60px; }
+.help-text { font-size: 11.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.checklist-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.checklist-item input[type=text] { flex: 1; }
+.checklist-item input[type=checkbox] { width: 16px; height: 16px; }
+.checklist-item button { background: none; border: none; color: var(--danger); font-size: 15px; cursor: pointer; }
+
+.reuniao-itens-header {
+  display: grid; grid-template-columns: 1fr 1.5fr 1fr 132px 22px; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--muted); padding: 0 2px 5px;
+}
+.reuniao-item-row {
+  display: grid; grid-template-columns: 1fr 1.5fr 1fr 132px 22px; gap: 8px;
+  align-items: center; margin-bottom: 8px;
+}
+.reuniao-item-row input { width: 100%; }
+.reuniao-item-row button {
+  background: none; border: none; color: var(--danger); font-size: 15px; cursor: pointer; padding: 0;
+}
+.notify-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+
+.list-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--borda);
+  border-radius: 8px; margin-bottom: 8px;
+}
+.list-row-info { flex: 1; min-width: 0; }
+.list-row-name { font-size: 13.5px; font-weight: 600; color: var(--v1); }
+.list-row-sub { font-size: 11.5px; color: var(--muted); }
+.color-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.15); }
+.badge { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 9px; background: var(--v6); color: var(--v2); }
+.section-sub { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--v2); margin: 18px 0 10px; }
+.section-sub:first-child { margin-top: 0; }
+
+.relatorio-lista { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.relatorio-linha { margin-bottom: 0; }
+.relatorio-linha-col { flex-direction: column; align-items: stretch; gap: 10px; }
+.relatorio-linha-topo { display: flex; align-items: center; gap: 10px; }
+.relatorio-semaforo { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+.relatorio-pct { font-size: 18px; font-weight: 700; flex-shrink: 0; }
+.relatorio-tarefas {
+  display: flex; flex-direction: column; gap: 4px; padding-left: 24px;
+  padding-top: 8px; border-top: 1px solid var(--borda);
+}
+.relatorio-tarefa-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.relatorio-tarefa-marcador { width: 13px; text-align: center; flex-shrink: 0; font-weight: 700; }
+.relatorio-tarefa-realizada { color: #43A047; }
+.relatorio-tarefa-atrasada { color: #E53935; font-weight: 600; }
+.relatorio-tarefa-pendente { color: var(--muted); }
+
+.empty-hint { text-align: center; color: var(--muted); font-size: 12.5px; padding: 24px 8px; }
+
+.historico-list, .comentarios-list {
+  max-height: 170px; overflow-y: auto; border: 1px solid var(--borda);
+  border-radius: 7px; padding: 8px 10px; margin-bottom: 8px;
+}
+.historico-entry, .comentario-entry { font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--borda); }
+.historico-entry:last-child, .comentario-entry:last-child { border-bottom: none; }
+.historico-entry-meta, .comentario-entry-meta { color: var(--muted); font-size: 10.5px; margin-top: 2px; }
+.comentario-entry-meta { margin-top: 0; margin-bottom: 3px; }
+
+/* ── TOAST ── */
+#toasts { position: fixed; bottom: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--v1); color: #fff; padding: 12px 16px; border-radius: 8px; font-size: 13px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 10px; max-width: 340px;
+  animation: toastin .2s ease;
+}
+.toast.err { background: var(--danger); }
+.toast a, .toast button.toast-action {
+  color: var(--v4); font-weight: 600; text-decoration: none; background: none; border: none;
+  font-family: inherit; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+@keyframes toastin { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: translateY(0);} }
+
+@media (max-width: 680px) {
+  header { padding: 10px 16px; }
+  .app-layout { flex-direction: column; }
+  .sidebar {
+    width: 100% !important; flex-direction: row; align-items: center;
+    border-right: none; border-bottom: 1px solid var(--borda);
+  }
+  .sidebar-top { padding: 8px; }
+  .sidebar-nav { flex: 1; display: flex; flex-direction: row; overflow-x: auto; padding: 6px 8px; }
+  .sidebar-nav-item { margin-bottom: 0; }
+  .sidebar-nav-label { display: none; }
+  .sidebar-nav-row { padding: 8px; }
+  .sidebar-sub {
+    display: block; max-height: 60vh; overflow-y: auto; padding-left: 0;
+    position: absolute; top: 54px; left: 0; width: 220px;
+    background: #fff; border: 1px solid var(--borda); border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2); padding: 12px;
+    opacity: 0; pointer-events: none; transition: opacity .15s ease; z-index: 300;
+  }
+  .sidebar-nav-item:hover .sidebar-sub, .sidebar-nav-item.expanded .sidebar-sub {
+    opacity: 1; pointer-events: auto;
+  }
+  .sidebar-sub-title { display: block; }
+  .sidebar-user { border-top: none; border-left: 1px solid var(--borda); }
+  .board-wrap { padding: 14px 16px 24px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="logo">terra<span>ZOO</span></div>
+    <span class="header-tag" id="headerTag">Gerenciador de Tarefas</span>
+  </div>
+</header>
+
+<button class="btn-config-watermark" id="btnConfig" title="Configurações">⚙️</button>
+
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <button class="sidebar-toggle" id="btnToggleSidebar" title="Expandir/recolher menu">☰</button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-nav-item" id="navNovaTarefa">
+        <div class="sidebar-nav-row" id="btnNovaTarefa" title="Nova Tarefa">
+          <span class="sidebar-nav-icon sidebar-add-icon">+</span>
+          <span class="sidebar-nav-label">Nova Tarefa</span>
+        </div>
+      </div>
+      <div class="sidebar-nav-item" id="navSemReuniao">
+        <div class="sidebar-nav-row" id="btnFiltroSemReuniao" title="Tarefas sem reunião vinculada">
+          <span class="sidebar-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="9" y1="6" x2="20" y2="6"/>
+              <line x1="9" y1="12" x2="20" y2="12"/>
+              <line x1="9" y1="18" x2="20" y2="18"/>
+              <circle cx="4.5" cy="6" r="1.2" fill="currentColor" stroke="none"/>
+              <circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+              <circle cx="4.5" cy="18" r="1.2" fill="currentColor" stroke="none"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-label">Tarefas</span>
+        </div>
+      </div>
+      <div class="sidebar-nav-item" id="navReunioes">
+        <div class="sidebar-nav-row" title="Reuniões">
+          <span class="sidebar-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3.5" y="5" width="17" height="15" rx="2"/>
+              <line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/>
+              <line x1="8" y1="3" x2="8" y2="7"/>
+              <line x1="16" y1="3" x2="16" y2="7"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-label">Reuniões</span>
+        </div>
+        <div class="sidebar-sub">
+          <div class="sidebar-sub-title">Reuniões</div>
+          <div class="sidebar-item sidebar-item-action" id="sidebarActionNovaReuniao">+ Nova Reunião</div>
+          <div class="sidebar-list" id="sidebarReunioes"></div>
+        </div>
+      </div>
+      <div class="sidebar-nav-item" id="navDeptos">
+        <div class="sidebar-nav-row" title="Departamentos">
+          <span class="sidebar-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="3" width="12" height="18" rx="1"/>
+              <path d="M16 21V9h4v12"/>
+              <rect x="7" y="6" width="2" height="2"/>
+              <rect x="11" y="6" width="2" height="2"/>
+              <rect x="7" y="10" width="2" height="2"/>
+              <rect x="11" y="10" width="2" height="2"/>
+              <rect x="7" y="14" width="2" height="2"/>
+              <rect x="11" y="14" width="2" height="2"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-label">Departamentos</span>
+        </div>
+        <div class="sidebar-sub">
+          <div class="sidebar-sub-title">Departamentos</div>
+          <div class="sidebar-item sidebar-item-action" id="sidebarActionNovoDepto">+ Novo Departamento</div>
+          <div class="sidebar-list" id="sidebarDeptos"></div>
+        </div>
+      </div>
+      <div class="sidebar-nav-item" id="navUsuarios">
+        <div class="sidebar-nav-row" title="Responsáveis">
+          <span class="sidebar-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="3.6"/>
+              <path d="M4.5 20c1-4 4-6 7.5-6s6.5 2 7.5 6"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-label">Responsáveis</span>
+        </div>
+        <div class="sidebar-sub">
+          <div class="sidebar-sub-title">Responsáveis</div>
+          <div class="sidebar-item sidebar-item-action" id="sidebarActionNovoUsuario">+ Novo Responsável</div>
+          <div class="sidebar-list" id="sidebarUsuarios"></div>
+        </div>
+      </div>
+      <div class="sidebar-nav-item" id="navRelatorios">
+        <div class="sidebar-nav-row" title="Relatórios">
+          <span class="sidebar-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="20" x2="20" y2="20"/>
+              <rect x="6" y="12" width="3" height="8"/>
+              <rect x="11" y="7" width="3" height="13"/>
+              <rect x="16" y="14" width="3" height="6"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-label">Relatórios</span>
+        </div>
+        <div class="sidebar-sub">
+          <div class="sidebar-sub-title">Relatórios</div>
+          <div class="sidebar-list" id="sidebarRelatorios"></div>
+        </div>
+      </div>
+      <div class="sidebar-nav-item" id="navArquivo">
+        <div class="sidebar-nav-row" id="btnFiltroArquivo" title="Arquivo">
+          <span class="sidebar-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="7" width="18" height="13" rx="1"/>
+              <path d="M3 7l2-4h14l2 4"/>
+              <line x1="9.5" y1="11.5" x2="14.5" y2="11.5"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-label">Arquivo</span>
+        </div>
+      </div>
+      <div class="sidebar-nav-item" id="navBuscar">
+        <div class="sidebar-nav-row sidebar-search-row" title="Buscar tarefa">
+          <span class="sidebar-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="10.5" cy="10.5" r="6.5"/>
+              <line x1="15.5" y1="15.5" x2="20.5" y2="20.5"/>
+            </svg>
+          </span>
+          <input type="text" id="filterBusca" class="sidebar-search-input" placeholder="Buscar tarefa..."/>
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-user" id="sidebarUser" title="Menu do usuário">
+      <span class="sidebar-user-avatar" id="sidebarUserAvatar">?</span>
+      <span class="sidebar-user-name" id="sidebarUserName">Identificar-se</span>
+      <div class="sidebar-user-menu" id="sidebarUserMenu">
+        <div class="sidebar-user-menu-header">
+          <span>Conta</span>
+          <button type="button" id="sidebarUserMenuClose" title="Fechar">✕</button>
+        </div>
+        <button type="button" class="sidebar-user-menu-item" id="btnSidebarUserSair">🚪 Sair</button>
+      </div>
+    </div>
+  </aside>
+  <div class="board-wrap">
+    <div class="board-title-bar">
+      <div class="board-title-row" id="boardTitleRow">Quadro de Tarefas</div>
+      <div class="priority-filter" id="priorityFilter">
+        <div class="priority-filter-trigger" id="priorityFilterTrigger">
+          <span id="priorityFilterLabel">Todas as prioridades</span>
+          <svg class="priority-filter-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <div class="priority-filter-panel" id="priorityFilterPanel">
+          <div class="sidebar-item priority-filter-item active" data-prioridade="">Todas as prioridades</div>
+          <div class="sidebar-item priority-filter-item" data-prioridade="baixa">Baixa</div>
+          <div class="sidebar-item priority-filter-item" data-prioridade="media">Média</div>
+          <div class="sidebar-item priority-filter-item" data-prioridade="alta">Alta</div>
+          <div class="sidebar-item priority-filter-item" data-prioridade="urgente">Urgente</div>
+        </div>
+      </div>
+    </div>
+    <div class="board" id="board"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<!-- ═══ MODAL: Login ═══ -->
+<div class="modal-overlay login-overlay" id="modalIdentidade">
+  <div class="login-card">
+    <div class="login-logo">terra<span>ZOO</span></div>
+    <div class="login-tagline">Gerenciador de Tarefas</div>
+    <div class="login-divider"></div>
+    <h3 class="login-heading">Acesso ao Sistema</h3>
+    <div class="login-field">
+      <label>Login</label>
+      <input type="email" id="loginEmail" placeholder="Digite seu login" autocomplete="username"/>
+    </div>
+    <div class="login-field">
+      <label>Senha</label>
+      <input type="password" id="loginSenha" placeholder="Digite sua senha" autocomplete="current-password"/>
+    </div>
+    <label class="login-remember">
+      <input type="checkbox" id="loginLembrar"/>
+      <span>Lembrar senha</span>
+    </label>
+    <button class="login-submit" id="btnIdentConfirmar">Entrar</button>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Trocar senha (obrigatório no primeiro acesso) ═══ -->
+<div class="modal-overlay" id="modalTrocarSenha">
+  <div class="modal">
+    <div class="modal-header"><h3>Defina uma nova senha</h3></div>
+    <div class="modal-body">
+      <p class="help-text" style="margin-bottom:14px">Você está usando a senha padrão. Por segurança, defina uma nova senha para continuar.</p>
+      <div class="form-group">
+        <label>Nova senha</label>
+        <input type="password" id="trocarSenhaNova" autocomplete="new-password"/>
+      </div>
+      <div class="form-group">
+        <label>Confirmar nova senha</label>
+        <input type="password" id="trocarSenhaConfirmar" autocomplete="new-password"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="btnSalvarNovaSenha" style="width:100%">Salvar nova senha e entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Tarefa ═══ -->
+<div class="modal-overlay" id="modalTarefa">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="tarefaModalTitulo">Nova Tarefa</h3>
+      <button class="modal-close" data-close>✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Título</label>
+        <input type="text" id="tTitulo" placeholder="Ex: Enviar proposta ao cliente X"/>
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <textarea id="tDescricao" placeholder="Detalhes, contexto da reunião, links..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Departamento</label>
+          <select id="tDepto"></select>
+        </div>
+        <div class="form-group">
+          <label>Responsável</label>
+          <select id="tResponsavel"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Prioridade</label>
+          <select id="tPrioridade">
+            <option value="baixa">Baixa</option>
+            <option value="media" selected>Média</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Prazo</label>
+          <input type="date" id="tPrazo"/>
+        </div>
+        <div class="form-group">
+          <label>Coluna</label>
+          <select id="tColuna"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Recorrência</label>
+          <select id="tRecorrenciaTipo">
+            <option value="nenhuma">Não repete</option>
+            <option value="mensal">Mensal</option>
+          </select>
+        </div>
+        <div class="form-group" id="tRecorrenciaDiaBox" style="display:none">
+          <label>Dia do mês</label>
+          <input type="number" id="tRecorrenciaDia" min="1" max="28" placeholder="Ex: 5"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Reunião de origem</label>
+        <select id="tReuniao"><option value="">— Nenhuma —</option></select>
+      </div>
+      <div class="form-group">
+        <label>Checklist</label>
+        <div id="tChecklistItems"></div>
+        <button class="btn btn-sm" id="btnAddChecklistItem">+ Adicionar item</button>
+      </div>
+      <div class="form-group" id="tNotifyBox" style="display:none">
+        <label>Notificar responsável</label>
+        <div class="notify-row">
+          <button class="btn btn-sm" id="btnNotifyEmail">✉️ Enviar e-mail</button>
+        </div>
+        <div class="help-text">O e-mail abre seu cliente de e-mail padrão com a mensagem pronta (ou é enviado automaticamente se o backend estiver configurado).</div>
+      </div>
+      <div class="form-group" id="tComentariosBox" style="display:none">
+        <label>Comentários</label>
+        <div class="comentarios-list" id="tComentariosList"></div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="tNovoComentario" placeholder="Escreva um comentário..." style="flex:1"/>
+          <button class="btn btn-sm btn-primary" id="btnEnviarComentario">Enviar</button>
+        </div>
+      </div>
+      <div class="form-group" id="tHistoricoBox" style="display:none">
+        <label>Histórico</label>
+        <div class="historico-list" id="tHistoricoList"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btnExcluirTarefa" style="display:none;margin-right:auto">Excluir tarefa</button>
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn btn-primary" id="btnSalvarTarefa">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Departamentos ═══ -->
+<div class="modal-overlay" id="modalDeptos">
+  <div class="modal">
+    <div class="modal-header"><h3>Departamentos</h3><button class="modal-close" data-close>✕</button></div>
+    <div class="modal-body">
+      <div class="section-sub">Novo departamento</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label>Nome</label>
+          <input type="text" id="deptoNome" placeholder="Ex: Marketing"/>
+        </div>
+        <div class="form-group">
+          <label>Cor</label>
+          <input type="color" id="deptoCor" value="#4CAF50"/>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btnAddDepto" style="width:100%">+ Adicionar departamento</button>
+      <div class="section-sub">Departamentos cadastrados</div>
+      <div id="deptoList"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" data-close>Fechar</button></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Usuários / Responsáveis (mesmo cadastro, rótulos e lista mudam conforme a entrada) ═══ -->
+<div class="modal-overlay" id="modalUsuarios">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3 id="modalUsuariosTitulo">Usuários</h3><button class="modal-close" data-close>✕</button></div>
+    <div class="modal-body">
+      <div class="section-sub" id="usrFormTitulo">Novo usuário</div>
+      <div class="form-row">
+        <div class="form-group"><label>Nome</label><input type="text" id="usrNome"/></div>
+        <div class="form-group"><label>E-mail</label><input type="email" id="usrEmail"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" id="usrDeptoGroup"><label>Departamento</label><select id="usrDepto"></select></div>
+        <div class="form-group" id="usrCargoPermissaoGroup">
+          <label>Permissão</label>
+          <select id="usrCargoPermissao"><option value="membro">Membro</option><option value="admin">Admin</option></select>
+        </div>
+        <div class="form-group" id="usrCargoFuncaoGroup" style="display:none">
+          <label>Cargo</label>
+          <input type="text" id="usrCargoFuncao" placeholder="Ex: Analista Financeiro"/>
+          <div class="help-text">Nível hierárquico na empresa — não dá nenhum poder dentro do sistema.</div>
+        </div>
+      </div>
+      <div class="form-group" id="usrSenhaGroup" style="display:none">
+        <label id="usrSenhaLabel">Senha de acesso</label>
+        <input type="password" id="usrSenha" autocomplete="new-password"/>
+        <div class="help-text" id="usrSenhaAjuda">Defina a senha inicial deste responsável. Ele poderá trocá-la depois.</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" id="btnAddUsuario" style="flex:1">+ Adicionar usuário</button>
+        <button class="btn" id="btnCancelarEdicaoUsuario" style="display:none">Cancelar edição</button>
+      </div>
+      <div class="section-sub" id="usrListTitulo">Usuários cadastrados</div>
+      <div id="usuarioList"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" data-close>Fechar</button></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Configuração inicial do usuário master (obrigatório, uma vez) ═══ -->
+<div class="modal-overlay" id="modalConfigurarMaster">
+  <div class="modal">
+    <div class="modal-header"><h3>Configuração inicial</h3></div>
+    <div class="modal-body">
+      <p class="help-text" style="margin-bottom:14px">Antes do primeiro acesso, defina o e-mail do usuário master (Fadrick Leveghin). A senha inicial é <strong>123456</strong> e deverá ser trocada logo em seguida.</p>
+      <div class="form-group">
+        <label>E-mail do usuário master</label>
+        <input type="email" id="setupMasterEmail" placeholder="voce@terrazoo.com.br"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="btnSalvarConfigMaster" style="width:100%">Salvar e continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Reuniões ═══ -->
+<div class="modal-overlay" id="modalReuniao">
+  <div class="modal modal-lg">
+    <div class="modal-header"><h3>Reuniões</h3><button class="modal-close" data-close>✕</button></div>
+    <div class="modal-body">
+      <div class="section-sub" id="reuniaoFormTitulo">Nova reunião — Checklist</div>
+      <p class="help-text" id="reuniaoHelpText" style="margin-bottom:14px">Registre a reunião e cadastre os itens de ação já com departamento, responsável e prazo. Digite as primeiras letras em Departamento ou Responsável para preencher automaticamente e use Tab para avançar entre os campos.</p>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label>Título da reunião</label><input type="text" id="reuniaoTitulo" placeholder="Ex: Reunião de alinhamento semanal"/></div>
+        <div class="form-group"><label>Data</label><input type="date" id="reuniaoData"/></div>
+      </div>
+      <div class="form-group" id="reuniaoItensSection">
+        <label>Itens de ação</label>
+        <div class="reuniao-itens-header">
+          <span>Departamento</span><span>Nome da tarefa</span><span>Responsável</span><span>Prazo</span><span></span>
+        </div>
+        <div id="reuniaoItensBox"></div>
+        <button type="button" class="btn btn-sm" id="btnAddReuniaoItem">+ Adicionar item</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" id="btnCriarReuniao" style="flex:1">Criar reunião e tarefas</button>
+        <button class="btn" id="btnCancelarEdicaoReuniao" style="display:none">Cancelar edição</button>
+      </div>
+      <div class="section-sub">Reuniões cadastradas</div>
+      <div id="reuniaoList"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" data-close>Fechar</button></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Configurações ═══ -->
+<div class="modal-overlay" id="modalConfig">
+  <div class="modal">
+    <div class="modal-header"><h3>Configurações</h3><button class="modal-close" data-close>✕</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Status de sincronização</label>
+        <div class="sync-status" id="syncBadge">
+          <span class="sync-dot off" id="syncDot"></span>
+          <span id="syncLabel">Local</span>
+        </div>
+      </div>
+      <p class="help-text" style="margin-bottom:14px">
+        Por padrão este quadro funciona <strong>localmente</strong>, salvo apenas neste navegador. Para uso
+        <strong>multiusuário real</strong> (todo mundo vendo o mesmo quadro e recebendo e-mails automáticos),
+        publique o backend em Google Apps Script (arquivo <code>Code.gs</code> incluído no projeto) e cole a URL abaixo.
+      </p>
+      <div class="form-group">
+        <label>URL do backend (Google Apps Script Web App)</label>
+        <input type="text" id="cfgApiUrl" placeholder="https://script.google.com/macros/s/.../exec"/>
+      </div>
+      <div class="form-group">
+        <label><input type="checkbox" id="cfgAutoNotify" style="width:auto;display:inline-block;margin-right:6px"/>Notificar responsável automaticamente ao atribuir ou concluir tarefa</label>
+      </div>
+      <div class="form-group">
+        <label>Arquivar tarefas concluídas automaticamente após (dias, 0 = desativado)</label>
+        <input type="number" id="cfgArquivarDias" min="0" style="max-width:120px"/>
+        <div class="help-text">Ao entrar em uma coluna final, a tarefa continua visível no quadro até esse prazo. Você também pode arquivar manualmente pelo botão 📦 no card.</div>
+      </div>
+      <div class="section-sub">Usuários</div>
+      <p class="help-text" style="margin-bottom:10px">Usuários são as contas de acesso ao sistema (e-mail e senha). Cada tarefa pode ainda ser delegada a um responsável diferente do usuário logado.</p>
+      <button class="btn" id="btnGerenciarUsuarios" style="width:100%">👥 Gerenciar usuários</button>
+
+      <div class="section-sub">Dados de exemplo</div>
+      <button class="btn btn-danger" id="btnLimparExemplo">Remover dados de exemplo</button>
+      <p class="help-text" style="margin-top:14px">
+        Nota sobre permissões: as restrições por cargo (admin/membro) organizam o uso da equipe dentro do
+        aplicativo, mas não são uma barreira de segurança real — quem tiver a URL do backend consegue
+        chamá-la diretamente. Para controle de acesso rigoroso seria necessário autenticação no Apps Script.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn btn-primary" id="btnSalvarConfig">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: Confirmação genérica ═══ -->
+<div class="modal-overlay" id="modalConfirm">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header"><h3 id="confirmTitulo">Confirmar</h3></div>
+    <div class="modal-body"><p id="confirmTexto"></p></div>
+    <div class="modal-footer">
+      <button class="btn" data-close>Cancelar</button>
+      <button class="btn btn-danger" id="btnConfirmOk">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ═══════════════════════ ARMAZENAMENTO ═══════════════════════ */
+const LS_KEY = 'tz_tarefas_v1';
+
+/* Usuário master pré-configurado no código — sempre presente, não pode ser excluído.
+   É só conta de acesso (login): sem e-mail fixo no código (definido uma única vez na
+   "Configuração inicial" no primeiro acesso), sem WhatsApp, sem departamento, e não
+   aparece como opção de responsável pelas tarefas. */
+const USUARIO_MASTER = {
+  id: 'usr_master_fadrick',
+  nome: 'Fadrick Leveghin',
+  email: '',
+  departamentoId: '',
+  cargo: 'admin',
+  ativo: true,
+  master: true
+};
+
+/* Responsável de exemplo — usuário master é só conta de acesso (login), não aparece
+   como opção de responsável pelas tarefas; por isso o quadro de exemplo precisa de
+   pelo menos um responsável "de verdade" para as tarefas demonstrativas. */
+const RESPONSAVEL_DEMO = {
+  id: 'u_demo_ana',
+  nome: 'Ana Ferreira',
+  email: 'ana.ferreira@terrazoo.com.br',
+  departamentoId: 'd1',
+  cargo: 'membro',
+  ativo: true
+};
+
+const DEFAULT_STATE = () => ({
+  departamentos: [
+    { id: 'd_controladoria', nome: 'Controladoria', cor: '#1a2e1f' },
+    { id: 'd1', nome: 'Financeiro', cor: '#2E7D32' },
+    { id: 'd2', nome: 'Operações', cor: '#4CAF50' }
+  ],
+  usuarios: [
+    Object.assign({}, USUARIO_MASTER),
+    Object.assign({}, RESPONSAVEL_DEMO)
+  ],
+  colunas: [
+    { id: 'c1', nome: 'A Fazer', ordem: 0, final: false, limite: 0 },
+    { id: 'c2', nome: 'Em Andamento', ordem: 1, final: false, limite: 0 },
+    { id: 'c3', nome: 'Em Revisão', ordem: 2, final: false, limite: 0 },
+    { id: 'c4', nome: 'Concluído', ordem: 3, final: true, limite: 0 }
+  ],
+  reunioes: [
+    { id: 'r1', titulo: 'Reunião de Alinhamento (exemplo)', data: todayISO(), arquivada: false, arquivadaEm: null }
+  ],
+  tarefas: [
+    { id: 't1', titulo: 'Enviar ata da reunião ao time', descricao: 'Resumo dos pontos discutidos e responsáveis.', departamentoId: 'd1', responsavelId: RESPONSAVEL_DEMO.id, colunaId: 'c1', prioridade: 'media', prazo: todayISO(), reuniaoId: 'r1', criadoPor: USUARIO_MASTER.id, criadoEm: todayISO(), concluidoEm: null, ordem: 0, checklist: [], comentarios: [], recorrencia: { tipo: 'nenhuma' }, ultimaGeracaoEm: '', arquivada: false, arquivadaEm: null },
+    { id: 't2', titulo: 'Atualizar planilha de orçamento', descricao: '', departamentoId: 'd1', responsavelId: RESPONSAVEL_DEMO.id, colunaId: 'c2', prioridade: 'alta', prazo: '', reuniaoId: 'r1', criadoPor: USUARIO_MASTER.id, criadoEm: todayISO(), concluidoEm: null, ordem: 0, checklist: [{id:'ci1',texto:'Revisar valores de outubro',feito:true},{id:'ci2',texto:'Enviar para diretoria',feito:false}], comentarios: [], recorrencia: { tipo: 'mensal', diaBase: 5 }, ultimaGeracaoEm: '', arquivada: false, arquivadaEm: null },
+    { id: 't3', titulo: 'Contratar novo analista', descricao: '', departamentoId: 'd2', responsavelId: RESPONSAVEL_DEMO.id, colunaId: 'c4', prioridade: 'baixa', prazo: '', reuniaoId: '', criadoPor: USUARIO_MASTER.id, criadoEm: todayISO(), concluidoEm: todayISO(), ordem: 0, checklist: [], comentarios: [], recorrencia: { tipo: 'nenhuma' }, ultimaGeracaoEm: '', arquivada: false, arquivadaEm: null }
+  ],
+  historico: [],
+  config: { apiUrl: '', autoNotify: true, currentUserId: '', exemploCarregado: true, arquivarAposDias: 3, responsaveisImportados: false }
+});
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,10); }
+
+function carregarEstado(){
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return DEFAULT_STATE();
+    const parsed = JSON.parse(raw);
+    return Object.assign(DEFAULT_STATE(), parsed);
+  } catch(e){ return DEFAULT_STATE(); }
+}
+function persistir(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+/* Garante que o usuário master sempre exista, mesmo depois de "Remover dados de
+   exemplo" ou em estados salvos antigos. Ele não tem departamento (é só conta de
+   login) — o campo é limpo mesmo em cadastros antigos que ainda o tinham. */
+function garantirUsuarioMaster(){
+  const existeMaster = state.usuarios.some(u => u.master === true || u.id === USUARIO_MASTER.id);
+  if (!existeMaster) {
+    state.usuarios.unshift(Object.assign({}, USUARIO_MASTER));
+  } else {
+    state.usuarios.forEach(u => { if (u.master) u.departamentoId = ''; });
+  }
+}
+
+/* Departamentos da empresa — garantidos sempre presentes (adiciona os que
+   faltarem, sem duplicar por nome e sem mexer nos que já existem). */
+const DEPARTAMENTOS_PADRAO = [
+  { nome: 'Abastecimento', cor: '#812222' },
+  { nome: 'CD-Logistica', cor: '#813f22' },
+  { nome: 'Compras', cor: '#815b22' },
+  { nome: 'Contabilidade', cor: '#817722' },
+  { nome: 'Controladoria', cor: '#6e8122' },
+  { nome: 'Departamento Pessoal', cor: '#528122' },
+  { nome: 'Dho Corporativo', cor: '#358122' },
+  { nome: 'Diretoria', cor: '#22812c' },
+  { nome: 'Ecommerce', cor: '#228148' },
+  { nome: 'Financeiro', cor: '#228165' },
+  { nome: 'Gerencia', cor: '#228181' },
+  { nome: 'Gerencia - Lynkz', cor: '#226581' },
+  { nome: 'Manutenção', cor: '#224881' },
+  { nome: 'Marketing', cor: '#222c81' },
+  { nome: 'Prevenção De Perdas', cor: '#352281' },
+  { nome: 'Sac', cor: '#522281' },
+  { nome: 'Ti', cor: '#6e2281' },
+  { nome: 'Vidas', cor: '#812277' },
+  { nome: 'Agro', cor: '#81225b' },
+  { nome: 'Trademarketing', cor: '#81223f' }
+];
+function garantirDepartamentosPadrao(){
+  let mudou = false;
+  DEPARTAMENTOS_PADRAO.forEach(d => {
+    const jaExiste = state.departamentos.some(x => (x.nome||'').trim().toLowerCase() === d.nome.toLowerCase());
+    if (!jaExiste) {
+      const dep = { id: uid('d'), nome: d.nome, cor: d.cor };
+      state.departamentos.push(dep);
+      api.enviar('salvarDepartamento', { dado: dep });
+      mudou = true;
+    }
+  });
+  if (mudou) persistir();
+}
+
+/* Acha o departamento pelo nome (ignorando maiúsculas/acentos, e aceitando abreviações
+   como "DHO" para "Dho Corporativo" ou "TI" para "Ti"); cria um novo se não achar nenhum. */
+function garantirDepartamentoPorNome(nome){
+  const alvo = normalizarTexto(nome);
+  let d = state.departamentos.find(x => normalizarTexto(x.nome) === alvo);
+  if (!d) {
+    d = state.departamentos.find(x => {
+      const n = normalizarTexto(x.nome);
+      return n.startsWith(alvo) || alvo.startsWith(n);
+    });
+  }
+  if (d) return d;
+  d = { id: uid('d'), nome, cor: '#546e7a' };
+  state.departamentos.push(d);
+  api.enviar('salvarDepartamento', { dado: d });
+  return d;
+}
+
+/* Responsáveis importados da planilha "Cadastro de Responsável" — cadastro único
+   (controlado por state.config.responsaveisImportados): roda uma vez só, então uma
+   pessoa excluída depois não volta sozinha no próximo carregamento. Fadrick Leveghin
+   não entra aqui porque já existe como usuário master (mesmo e-mail). */
+const RESPONSAVEIS_PADRAO = [
+  { nome: 'Ana Nísia', email: 'ana.nisia@lynkz.com.br', departamento: 'Gerencia', funcao: 'Gerente de Operações', senha: '123456' },
+  { nome: 'Cássio', email: 'cassio.brito@terrazoo.com.br', departamento: 'Compras', funcao: 'Gerente de Categoria', senha: '124456' },
+  { nome: 'Celso', email: 'celso.anceles@terrazoo.com.br', departamento: 'Prevenção', funcao: 'Supervisor de Prevenção', senha: '125456' },
+  { nome: 'César', email: 'cesar.santos@terrazoo.com.br', departamento: 'Abastecimento', funcao: 'Coordenador de Abstecimento', senha: '126456' },
+  { nome: 'Charles', email: 'charles.machado@lynkz.com.br', departamento: 'Atacado', funcao: 'Gerente Atacado', senha: '127456' },
+  { nome: 'Daniel', email: 'daniel.ferreira@terrazoo.com.br', departamento: 'Diretoria', funcao: 'CFO', senha: '128456' },
+  { nome: 'Emmanuel', email: 'emmanuel.mateus@terrazoo.com.br', departamento: 'Compras', funcao: 'Gerente de Categoria', senha: '129456' },
+  { nome: 'Fabiana Meireles', email: 'fabiana.meireles@terrazoo.com.br', departamento: 'Contabilidade', funcao: 'Gerente Contábil', senha: '130456' },
+  { nome: 'Fabiana Unias', email: 'fabiana@terrazoo.com.br', departamento: 'Compras', funcao: 'Gerente de Categoria', senha: '131456' },
+  { nome: 'Felipe', email: 'felipe.oliveira@terrazoo.com.br', departamento: 'Diretoria', funcao: 'Diretor Comercial', senha: '133456' },
+  { nome: 'João', email: 'joao.nogueira@terrazoo.com.br', departamento: 'Ecommerce', funcao: 'Gerente de Canais Digitais', senha: '134456' },
+  { nome: 'Kaio', email: 'kaio@terrazoo.com.br', departamento: 'TI', funcao: 'Gerente de TI', senha: '135456' },
+  { nome: 'Kênia', email: 'kenia.lobato@terrazoo.com.br', departamento: 'SAC', funcao: 'Gerente de SAC', senha: '136456' },
+  { nome: 'Lindomar', email: 'lindomar.oliveira@terrazoo.com.br', departamento: 'CD-Logística', funcao: 'Gerente de Logística', senha: '137456' },
+  { nome: 'Lucas', email: 'lucas.costa@terrazoo.com.br', departamento: 'Compras', funcao: 'Gerente de Categoria', senha: '138456' },
+  { nome: 'Márcio', email: 'marcio@terrazoo.com.br', departamento: 'Diretoria', funcao: 'CEO', senha: '139456' },
+  { nome: 'Nadilson', email: 'nadilson@terrazoo.com.br', departamento: 'CD-Logística', funcao: 'Gerente de Operações II', senha: '140456' },
+  { nome: 'Railton', email: 'railton@terrazoo.com.br', departamento: 'Compras', funcao: 'Gerente de Categoria', senha: '141456' },
+  { nome: 'Regina', email: 'regina@terrazoo.com.br', departamento: 'DHO', funcao: 'Gerente de DHO', senha: '142456' },
+  { nome: 'Ricardo', email: 'ricardo.filho@terrazoo.com.br', departamento: 'Marketing', funcao: 'Gerente de Marketing', senha: '143456' },
+  { nome: 'Roberto', email: 'roberto@terrazoo.com.br', departamento: 'Diretoria', funcao: 'Diretor', senha: '144456' },
+  { nome: 'Vanessa', email: 'vanessa.souza@terrazoo.com.br', departamento: 'Abastecimento', funcao: 'Gerente de Abastecimento', senha: '145456' }
+];
+async function importarResponsaveisPadrao(){
+  if (state.config.responsaveisImportados) return;
+  for (const r of RESPONSAVEIS_PADRAO) {
+    const jaExiste = state.usuarios.some(u => (u.email||'').toLowerCase() === r.email.toLowerCase());
+    if (jaExiste) continue;
+    const dep = garantirDepartamentoPorNome(r.departamento);
+    const novo = {
+      id: uid('u'), nome: r.nome, email: r.email, departamentoId: dep.id,
+      funcao: r.funcao, cargo: 'membro', ativo: true,
+      senha: await hashSenha(r.senha), precisaTrocarSenha: true
+    };
+    state.usuarios.push(novo);
+    api.enviar('salvarUsuario', { dado: novo });
+  }
+  state.config.responsaveisImportados = true;
+  persistir();
+}
+
+/* ═══════════════════════ SENHAS ═══════════════════════
+   Autenticação apenas em nível de UX (arquivo estático, sem servidor de verdade) —
+   a senha é guardada como hash SHA-256, nunca em texto puro, mas isso não substitui
+   um backend de autenticação real. Todo usuário novo recebe a senha padrão abaixo e
+   é obrigado a trocá-la (precisaTrocarSenha) no primeiro acesso. */
+const SENHA_PADRAO = '123456';
+async function hashSenha(senha){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(senha));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function garantirSenhasPadrao(){
+  const hashPadrao = await hashSenha(SENHA_PADRAO);
+  let mudou = false;
+  state.usuarios.forEach(u => {
+    if (!u.senha) { u.senha = hashPadrao; u.precisaTrocarSenha = true; mudou = true; }
+  });
+  if (mudou) persistir();
+  return hashPadrao;
+}
+
+let state = carregarEstado();
+garantirUsuarioMaster();
+persistir();
+
+/* ═══════════════════════ CAMADA API (local ou Apps Script) ═══════════════════════ */
+const api = {
+  get remoto(){ return !!state.config.apiUrl; },
+  async carregarRemoto(){
+    if (!this.remoto) return null;
+    try {
+      const resp = await fetch(state.config.apiUrl, { method: 'GET' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const dados = await resp.json();
+      return dados;
+    } catch(e){
+      toast('Não foi possível conectar ao backend. Usando dados locais.', true);
+      return null;
+    }
+  },
+  async enviar(acao, dado){
+    if (!this.remoto) return { ok: true, local: true };
+    try {
+      const resp = await fetch(state.config.apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ acao, dado })
+      });
+      return await resp.json();
+    } catch(e){
+      toast('Falha ao sincronizar com o backend (' + acao + ').', true);
+      return { ok: false };
+    }
+  }
+};
+
+/* Mescla por id: remoto prevalece quando o registro já existe dos dois lados
+   (mudanças locais feitas com o backend configurado já foram enviadas na hora);
+   registros que só existem localmente (criados antes de configurar o backend,
+   por exemplo) são preservados e reenviados, em vez de descartados. */
+function mesclarPorId(locais, remotos){
+  const remotosPorId = new Map((remotos||[]).map(r => [r.id, r]));
+  const somenteLocais = (locais||[]).filter(l => !remotosPorId.has(l.id));
+  return { mesclado: [...(remotos||[]), ...somenteLocais], somenteLocais };
+}
+
+async function sincronizarInicial(){
+  if (!api.remoto) { atualizarSyncBadge(); return; }
+  atualizarSyncBadge('conectando');
+  const dados = await api.carregarRemoto();
+  if (dados && dados.tarefas) {
+    const ENTIDADES = [
+      { chave: 'departamentos', acao: 'salvarDepartamento' },
+      { chave: 'usuarios', acao: 'salvarUsuario' },
+      { chave: 'colunas', acao: 'salvarColuna' },
+      { chave: 'reunioes', acao: 'salvarReuniao' },
+      { chave: 'tarefas', acao: 'salvarTarefa' },
+      { chave: 'historico', acao: 'registrarHistorico' }
+    ];
+    ENTIDADES.forEach(({ chave, acao }) => {
+      const { mesclado, somenteLocais } = mesclarPorId(state[chave], dados[chave]);
+      state[chave] = mesclado;
+      somenteLocais.forEach(dado => api.enviar(acao, { dado }));
+    });
+    persistir();
+    atualizarSyncBadge(true);
+  } else {
+    atualizarSyncBadge(false);
+  }
+  render();
+}
+
+function atualizarSyncBadge(status){
+  const dot = document.getElementById('syncDot');
+  const label = document.getElementById('syncLabel');
+  if (!api.remoto) { dot.className = 'sync-dot off'; label.textContent = 'Local'; return; }
+  if (status === 'conectando') { dot.className = 'sync-dot off'; label.textContent = 'Conectando...'; return; }
+  if (status === true) { dot.className = 'sync-dot on'; label.textContent = 'Sincronizado'; }
+  else { dot.className = 'sync-dot off'; label.textContent = 'Backend offline'; }
+}
+
+/* ═══════════════════════ TOASTS ═══════════════════════ */
+function toast(msg, isErr, actionLabel, actionFn){
+  const el = document.createElement('div');
+  el.className = 'toast' + (isErr ? ' err' : '');
+  const span = document.createElement('span');
+  span.textContent = msg;
+  el.appendChild(span);
+  if (actionLabel) {
+    const btn = document.createElement('button');
+    btn.className = 'toast-action';
+    btn.textContent = actionLabel;
+    btn.onclick = () => { actionFn(); el.remove(); };
+    el.appendChild(btn);
+  }
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 7000);
+}
+
+/* ═══════════════════════ HELPERS DE DADOS ═══════════════════════ */
+function depto(id){ return state.departamentos.find(d => d.id === id); }
+function usuario(id){ return state.usuarios.find(u => u.id === id); }
+function coluna(id){ return state.colunas.find(c => c.id === id); }
+function reuniao(id){ return state.reunioes.find(r => r.id === id); }
+function iniciais(nome){ return (nome||'?').trim().split(/\s+/).slice(0,2).map(p=>p[0]).join('').toUpperCase(); }
+function usuarioAtual(){ return usuario(state.config.currentUserId); }
+/* Quem pode ser escolhido como responsável de uma tarefa — inclui o master, pois ele também
+   pode ter tarefas atribuídas (só não aparece na tela de cadastro de Responsáveis, ali o
+   filtro é outro, feito direto em renderUsuarioList). */
+function responsaveisSelecionaveis(){ return state.usuarios.filter(u => u.ativo !== false); }
+function nomeExibicaoUsuario(u){ return (u.master ? '🔑 ' : '') + u.nome; }
+function souAdmin(){ const u = usuarioAtual(); return !!(u && u.cargo === 'admin'); }
+
+/* ═══════════════════════ TRILHA DE AUDITORIA ═══════════════════════ */
+function formatarDataHora(iso){
+  const d = new Date(iso);
+  if (isNaN(d)) return iso || '';
+  return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function registrarHistorico(entidade, entidadeId, acao, detalhes){
+  const entry = {
+    id: uid('h'), ts: new Date().toISOString(), usuarioId: state.config.currentUserId || '',
+    entidade, entidadeId, acao, detalhes: detalhes || ''
+  };
+  state.historico.push(entry);
+  persistir();
+  api.enviar('registrarHistorico', { dado: entry });
+  return entry;
+}
+function historicoDaTarefa(tarefaId){
+  return state.historico
+    .filter(h => h.entidade === 'tarefa' && h.entidadeId === tarefaId)
+    .sort((a,b) => b.ts.localeCompare(a.ts));
+}
+const CAMPOS_HISTORICO_TAREFA = [
+  { campo: 'titulo', label: 'título' },
+  { campo: 'descricao', label: 'descrição' },
+  { campo: 'departamentoId', label: 'departamento', formatar: v => v && depto(v) ? depto(v).nome : '—' },
+  { campo: 'responsavelId', label: 'responsável', formatar: v => v && usuario(v) ? usuario(v).nome : '—' },
+  { campo: 'prioridade', label: 'prioridade', formatar: v => labelPrioridade(v) },
+  { campo: 'prazo', label: 'prazo', formatar: v => v ? formatarData(v) : '—' },
+  { campo: 'colunaId', label: 'coluna', formatar: v => v && coluna(v) ? coluna(v).nome : '—' },
+  { campo: 'reuniaoId', label: 'reunião', formatar: v => v && reuniao(v) ? reuniao(v).titulo : '—' }
+];
+function registrarDiffTarefa(antes, depois){
+  CAMPOS_HISTORICO_TAREFA.forEach(({ campo, label, formatar }) => {
+    const vAntes = antes ? antes[campo] : undefined;
+    const vDepois = depois[campo];
+    if (vAntes === vDepois) return;
+    const fmt = formatar || (v => v || '—');
+    registrarHistorico('tarefa', depois.id, 'editar', `Alterou ${label} de "${fmt(vAntes)}" para "${fmt(vDepois)}"`);
+  });
+}
+
+/* ═══════════════════════ RENDER: FILTROS (BARRA LATERAL) ═══════════════════════ */
+let filtroReuniaoId = '';
+let filtroDeptoId = '';
+let filtroUsuarioId = '';
+let filtroPrioridade = '';
+let filtroSemReuniao = false;
+let filtroRelatorioReuniaoId = '';
+let modoArquivo = false;
+const RELATORIO_GERAL = '__geral__';
+
+function renderSidebar(){
+  const boxReunioes = document.getElementById('sidebarReunioes');
+  const boxDeptos = document.getElementById('sidebarDeptos');
+  const boxUsuarios = document.getElementById('sidebarUsuarios');
+  const boxRelatorios = document.getElementById('sidebarRelatorios');
+
+  boxReunioes.innerHTML = state.reunioes.filter(r => !r.arquivada).map(r => `
+    <div class="sidebar-item ${filtroReuniaoId===r.id?'active':''}" data-reuniao="${r.id}">${escapeHtml(r.titulo)}</div>
+  `).join('');
+
+  boxDeptos.innerHTML = state.departamentos.map(d => `
+    <div class="sidebar-item ${filtroDeptoId===d.id?'active':''}" data-depto="${d.id}">
+      <span class="sidebar-dot" style="background:${d.cor}"></span>${escapeHtml(d.nome)}
+    </div>
+  `).join('');
+
+  boxUsuarios.innerHTML = responsaveisSelecionaveis().map(u => `
+    <div class="sidebar-item ${filtroUsuarioId===u.id?'active':''}" data-usuario="${u.id}">${escapeHtml(nomeExibicaoUsuario(u))}</div>
+  `).join('');
+
+  boxRelatorios.innerHTML = `<div class="sidebar-item ${filtroRelatorioReuniaoId===RELATORIO_GERAL?'active':''}" data-relatorioreuniao="${RELATORIO_GERAL}">Todas as Tarefas</div>` +
+    state.reunioes.map(r => `
+    <div class="sidebar-item sidebar-item-child ${filtroRelatorioReuniaoId===r.id?'active':''}" data-relatorioreuniao="${r.id}">${escapeHtml(r.titulo)}</div>
+  `).join('');
+
+  boxReunioes.querySelectorAll('[data-reuniao]').forEach(el => el.addEventListener('click', () => {
+    filtroReuniaoId = (filtroReuniaoId === el.dataset.reuniao) ? '' : el.dataset.reuniao;
+    if (filtroReuniaoId) filtroSemReuniao = false;
+    render();
+  }));
+  boxDeptos.querySelectorAll('[data-depto]').forEach(el => el.addEventListener('click', () => {
+    filtroDeptoId = (filtroDeptoId === el.dataset.depto) ? '' : el.dataset.depto; render();
+  }));
+  boxUsuarios.querySelectorAll('[data-usuario]').forEach(el => el.addEventListener('click', () => {
+    filtroUsuarioId = (filtroUsuarioId === el.dataset.usuario) ? '' : el.dataset.usuario; render();
+  }));
+  boxRelatorios.querySelectorAll('[data-relatorioreuniao]').forEach(el => el.addEventListener('click', () => {
+    filtroRelatorioReuniaoId = (filtroRelatorioReuniaoId === el.dataset.relatorioreuniao) ? '' : el.dataset.relatorioreuniao;
+    if (filtroRelatorioReuniaoId) modoArquivo = false;
+    render();
+  }));
+
+  document.getElementById('navReunioes').classList.toggle('has-filter', !!filtroReuniaoId);
+  document.getElementById('navDeptos').classList.toggle('has-filter', !!filtroDeptoId);
+  document.getElementById('navUsuarios').classList.toggle('has-filter', !!filtroUsuarioId);
+  document.getElementById('navRelatorios').classList.toggle('has-filter', !!filtroRelatorioReuniaoId);
+  document.getElementById('navSemReuniao').classList.toggle('has-filter', filtroSemReuniao);
+  document.getElementById('navArquivo').classList.toggle('has-filter', modoArquivo);
+  document.getElementById('btnFiltroSemReuniao').classList.toggle('view-active', filtroSemReuniao);
+  document.getElementById('btnFiltroArquivo').classList.toggle('view-active', modoArquivo);
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ═══════════════════════ RENDER: QUADRO ═══════════════════════ */
+function tarefasFiltradas(){
+  const busca = document.getElementById('filterBusca').value.trim().toLowerCase();
+  return state.tarefas.filter(t => {
+    if (t.arquivada) return false;
+    if (filtroReuniaoId && t.reuniaoId !== filtroReuniaoId) return false;
+    if (filtroSemReuniao && t.reuniaoId) return false;
+    if (filtroDeptoId && t.departamentoId !== filtroDeptoId) return false;
+    if (filtroUsuarioId && t.responsavelId !== filtroUsuarioId) return false;
+    if (filtroPrioridade && t.prioridade !== filtroPrioridade) return false;
+    if (busca && !(t.titulo||'').toLowerCase().includes(busca)) return false;
+    return true;
+  });
+}
+
+/* Ordena: tarefas atrasadas sempre primeiro (a mais antiga na frente);
+   entre as demais, mantém ordenação por prazo (visão "Meus itens") ou manual. */
+function compararTarefas(a, b, usarOrdemPrazo){
+  const aAtrasada = isOverdue(a), bAtrasada = isOverdue(b);
+  if (aAtrasada !== bAtrasada) return aAtrasada ? -1 : 1;
+  if (aAtrasada && bAtrasada) return (a.prazo||'').localeCompare(b.prazo||'');
+  if (usarOrdemPrazo) return (a.prazo||'9999-99-99').localeCompare(b.prazo||'9999-99-99');
+  return a.ordem - b.ordem;
+}
+
+function isOverdue(t){
+  if (!t.prazo) return false;
+  const col = coluna(t.colunaId);
+  if (col && col.final) return false;
+  return t.prazo < todayISO();
+}
+
+function render(){
+  renderSidebar();
+  const board = document.getElementById('board');
+  board.style.justifyContent = '';
+  const filtroPrioridadeEl = document.getElementById('priorityFilter');
+
+  if (modoArquivo) {
+    filtroPrioridadeEl.style.display = '';
+    renderArquivo();
+    return;
+  }
+  if (filtroRelatorioReuniaoId) {
+    filtroPrioridadeEl.style.display = 'none';
+    renderRelatorio(filtroRelatorioReuniaoId);
+    return;
+  }
+  filtroPrioridadeEl.style.display = '';
+  document.getElementById('boardTitleRow').textContent = 'Quadro de Tarefas';
+
+  board.innerHTML = '';
+  const tarefas = tarefasFiltradas();
+  const cols = [...state.colunas].sort((a,b)=>a.ordem-b.ordem);
+  const usarOrdemPrazo = !!filtroUsuarioId && filtroUsuarioId === state.config.currentUserId;
+
+  cols.forEach(col => {
+    const wrap = document.createElement('div');
+    const contagem = tarefas.filter(t=>t.colunaId===col.id).length;
+    const estourouWip = (col.limite||0) > 0 && contagem > col.limite;
+    wrap.className = 'column' + (estourouWip ? ' wip-over' : '');
+    wrap.dataset.colId = col.id;
+    wrap.draggable = false;
+
+    const header = document.createElement('div');
+    header.className = 'column-header';
+    header.draggable = true;
+    header.innerHTML = `
+      <span class="col-final-flag">${col.final ? '✅' : ''}</span>
+      <input class="col-name" value="${escapeHtml(col.nome)}" data-col="${col.id}"/>
+      <span class="col-count ${estourouWip?'col-count-over':''}" title="${estourouWip?'Limite de WIP excedido':''}">${contagem}${col.limite>0?'/'+col.limite:''}</span>
+      <button class="col-menu-btn" data-colmenu="${col.id}">⋮</button>
+    `;
+    wrap.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'column-body';
+    body.dataset.colId = col.id;
+
+    const tarefasCol = tarefas.filter(t=>t.colunaId===col.id);
+    tarefasCol.sort((a,b) => compararTarefas(a, b, usarOrdemPrazo));
+    if (tarefasCol.length === 0) {
+      body.innerHTML = '<div class="empty-hint" style="display:none"></div>';
+    }
+    tarefasCol.forEach(t => body.appendChild(criarCardEl(t)));
+    wrap.appendChild(body);
+
+    const footer = document.createElement('div');
+    footer.className = 'column-footer';
+    footer.innerHTML = `<button class="add-card-btn" data-addcard="${col.id}">+ Adicionar tarefa</button>`;
+    wrap.appendChild(footer);
+
+    board.appendChild(wrap);
+  });
+
+  // evita a faixa de espaço vazio à direita quando as colunas não preenchem a largura
+  // disponível (ex.: sidebar recolhida) — centraliza; se não couber, mantém rolagem normal.
+  board.style.justifyContent = board.scrollWidth > board.clientWidth ? 'flex-start' : 'center';
+
+  ligarEventosBoard();
+}
+
+/* ═══════════════════════ RELATÓRIO: RESUMO POR RESPONSÁVEL NUMA REUNIÃO ═══════════════════════ */
+function corSemaforo(pct){
+  if (pct >= 100) return '#43A047';
+  if (pct >= 90) return '#FFB300';
+  return '#E53935';
+}
+function formatarPercentual(pct){
+  const arred = Math.round(pct * 10) / 10;
+  return (Number.isInteger(arred) ? arred : arred.toFixed(1)) + '%';
+}
+
+function renderRelatorio(reuniaoId){
+  const board = document.getElementById('board');
+  const geral = reuniaoId === RELATORIO_GERAL;
+  const reu = geral ? null : reuniao(reuniaoId);
+  document.getElementById('boardTitleRow').textContent = geral ? 'Relatório — Todas as Tarefas' : (reu ? `Relatório — ${reu.titulo}` : 'Relatório');
+
+  const tarefasReuniao = geral ? state.tarefas.slice() : state.tarefas.filter(t => t.reuniaoId === reuniaoId);
+  if (!tarefasReuniao.length) {
+    board.innerHTML = '<div class="empty-hint">Nenhuma tarefa para este relatório.</div>';
+    return;
+  }
+
+  const responsaveisIds = [...new Set(tarefasReuniao.map(t => t.responsavelId || ''))];
+  const linhas = responsaveisIds.map(respId => {
+    const u = respId ? usuario(respId) : null;
+    const tarefasResp = tarefasReuniao.filter(t => (t.responsavelId || '') === respId);
+    const total = tarefasResp.length;
+    const realizadas = tarefasResp.filter(t => { const c = coluna(t.colunaId); return c && c.final; }).length;
+    const atrasadas = tarefasResp.filter(t => isOverdue(t)).length;
+    const pendentes = total - realizadas - atrasadas;
+    const alcance = total ? (realizadas / total * 100) : 0;
+    const tarefasOrdenadas = [...tarefasResp].sort((a, b) => {
+      const statusOrdem = t => isOverdue(t) ? 0 : (coluna(t.colunaId) && coluna(t.colunaId).final ? 2 : 1);
+      return statusOrdem(a) - statusOrdem(b);
+    }).map(t => {
+      const c = coluna(t.colunaId);
+      const status = isOverdue(t) ? 'atrasada' : (c && c.final ? 'realizada' : 'pendente');
+      const marcador = status === 'realizada' ? '✓' : (status === 'atrasada' ? '⚠' : '•');
+      return { titulo: t.titulo, status, marcador };
+    });
+    return {
+      nome: u ? u.nome : 'Sem responsável definido',
+      total, realizadas, pendentes, atrasadas,
+      alcanceTxt: formatarPercentual(alcance),
+      cor: corSemaforo(alcance),
+      tarefas: tarefasOrdenadas
+    };
+  }).sort((a,b) => b.total - a.total);
+
+  board.innerHTML = `<div class="relatorio-lista">` + linhas.map(l => `
+    <div class="list-row relatorio-linha relatorio-linha-col">
+      <div class="relatorio-linha-topo">
+        <span class="relatorio-semaforo" style="background:${l.cor}" title="Alcance: ${l.alcanceTxt}"></span>
+        <div class="list-row-info">
+          <div class="list-row-name">${escapeHtml(l.nome)}</div>
+          <div class="list-row-sub">${l.total} tarefa${l.total===1?'':'s'} · ${l.realizadas} realizada${l.realizadas===1?'':'s'} · ${l.pendentes} pendente${l.pendentes===1?'':'s'} · ${l.atrasadas} atrasada${l.atrasadas===1?'':'s'}</div>
+        </div>
+        <div class="relatorio-pct" style="color:${l.cor}">${l.alcanceTxt}</div>
+      </div>
+      <div class="relatorio-tarefas">
+        ${l.tarefas.map(t => `<div class="relatorio-tarefa-item relatorio-tarefa-${t.status}"><span class="relatorio-tarefa-marcador">${t.marcador}</span>${escapeHtml(t.titulo)}</div>`).join('')}
+      </div>
+    </div>
+  `).join('') + `</div>`;
+}
+
+/* ═══════════════════════ ARQUIVO ═══════════════════════ */
+/* Mantém reuniao.arquivada em sincronia com o estado das suas tarefas:
+   arquiva a reunião quando todas as suas tarefas ficam arquivadas, e reabre
+   a reunião assim que alguma tarefa dela volta a ficar ativa. */
+function sincronizarArquivamentoReuniao(reuniaoId){
+  if (!reuniaoId) return;
+  const r = reuniao(reuniaoId);
+  if (!r) return;
+  const tarefasReuniao = state.tarefas.filter(t => t.reuniaoId === reuniaoId);
+  if (!tarefasReuniao.length) return;
+  const temAtiva = tarefasReuniao.some(t => !t.arquivada);
+  if (temAtiva && r.arquivada) {
+    r.arquivada = false;
+    r.arquivadaEm = null;
+    persistir();
+    api.enviar('salvarReuniao', { dado: r });
+    registrarHistorico('reuniao', r.id, 'restaurar', `Reunião reaberta automaticamente: "${r.titulo}"`);
+  } else if (!temAtiva && !r.arquivada) {
+    r.arquivada = true;
+    r.arquivadaEm = new Date().toISOString();
+    persistir();
+    api.enviar('salvarReuniao', { dado: r });
+    registrarHistorico('reuniao', r.id, 'arquivar', `Reunião arquivada automaticamente: "${r.titulo}"`);
+  }
+}
+
+function arquivarTarefa(id){
+  const t = state.tarefas.find(x=>x.id===id);
+  if (!t) return;
+  t.arquivada = true;
+  t.arquivadaEm = new Date().toISOString();
+  persistir();
+  api.enviar('salvarTarefa', { dado: t });
+  registrarHistorico('tarefa', t.id, 'arquivar', `Tarefa arquivada: "${t.titulo}"`);
+  sincronizarArquivamentoReuniao(t.reuniaoId);
+  render();
+  toast('Tarefa arquivada.');
+}
+function restaurarTarefa(id){
+  const t = state.tarefas.find(x=>x.id===id);
+  if (!t) return;
+  t.arquivada = false;
+  t.arquivadaEm = null;
+  persistir();
+  api.enviar('salvarTarefa', { dado: t });
+  registrarHistorico('tarefa', t.id, 'restaurar', `Tarefa restaurada do arquivo: "${t.titulo}"`);
+  sincronizarArquivamentoReuniao(t.reuniaoId);
+  render();
+  toast('Tarefa restaurada.');
+}
+function verificarArquivamentoAutomatico(t){
+  const escopo = t.reuniaoId
+    ? state.tarefas.filter(t2 => t2.reuniaoId === t.reuniaoId)
+    : state.tarefas.filter(t2 => !t2.reuniaoId);
+  const pendentes = escopo.filter(t2 => !t2.arquivada && !(coluna(t2.colunaId) && coluna(t2.colunaId).final));
+  if (pendentes.length > 0) return;
+  const finalizadas = escopo.filter(t2 => !t2.arquivada && coluna(t2.colunaId) && coluna(t2.colunaId).final);
+  if (!finalizadas.length) return;
+
+  const reu = t.reuniaoId ? reuniao(t.reuniaoId) : null;
+  const contexto = reu ? `da reunião "${reu.titulo}"` : 'sem reunião vinculada';
+  const plural = finalizadas.length > 1;
+  abrirConfirm(
+    'Arquivar tarefas concluídas?',
+    `Todas as tarefas ${contexto} foram concluídas. Deseja arquivar ${plural ? 'essas ' + finalizadas.length + ' tarefas' : 'essa tarefa'} agora?`,
+    () => {
+      finalizadas.forEach(t2 => {
+        t2.arquivada = true;
+        t2.arquivadaEm = new Date().toISOString();
+        api.enviar('salvarTarefa', { dado: t2 });
+        registrarHistorico('tarefa', t2.id, 'arquivar', `Tarefa arquivada: "${t2.titulo}"`);
+      });
+      persistir();
+      sincronizarArquivamentoReuniao(t.reuniaoId);
+      render();
+      toast(plural ? 'Tarefas arquivadas.' : 'Tarefa arquivada.');
+    }
+  );
+}
+
+function arquivarAutomaticamente(){
+  const dias = state.config.arquivarAposDias;
+  if (!dias || dias <= 0) return;
+  const limite = new Date();
+  limite.setDate(limite.getDate() - dias);
+  const limiteISO = limite.toISOString().slice(0,10);
+  let arquivouAlguma = false;
+  const reunioesAfetadas = new Set();
+  state.tarefas.forEach(t => {
+    if (t.arquivada || !t.concluidoEm) return;
+    if (t.concluidoEm <= limiteISO) {
+      t.arquivada = true;
+      t.arquivadaEm = new Date().toISOString();
+      api.enviar('salvarTarefa', { dado: t });
+      registrarHistorico('tarefa', t.id, 'arquivar', `Arquivada automaticamente (${dias} dia(s) após conclusão)`);
+      arquivouAlguma = true;
+      if (t.reuniaoId) reunioesAfetadas.add(t.reuniaoId);
+    }
+  });
+  if (arquivouAlguma) persistir();
+  reunioesAfetadas.forEach(id => sincronizarArquivamentoReuniao(id));
+}
+
+function renderArquivo(){
+  const board = document.getElementById('board');
+  document.getElementById('boardTitleRow').textContent = 'Arquivo';
+  const busca = document.getElementById('filterBusca').value.trim().toLowerCase();
+
+  const arquivadas = state.tarefas.filter(t => {
+    if (!t.arquivada) return false;
+    if (filtroReuniaoId && t.reuniaoId !== filtroReuniaoId) return false;
+    if (filtroSemReuniao && t.reuniaoId) return false;
+    if (filtroDeptoId && t.departamentoId !== filtroDeptoId) return false;
+    if (filtroUsuarioId && t.responsavelId !== filtroUsuarioId) return false;
+    if (filtroPrioridade && t.prioridade !== filtroPrioridade) return false;
+    if (busca && !(t.titulo||'').toLowerCase().includes(busca)) return false;
+    return true;
+  }).sort((a,b) => (b.arquivadaEm||'').localeCompare(a.arquivadaEm||''));
+
+  if (!arquivadas.length) {
+    board.innerHTML = '<div class="empty-hint">Nenhuma tarefa arquivada com os filtros atuais.</div>';
+    return;
+  }
+
+  board.innerHTML = `<div class="relatorio-lista">` + arquivadas.map(t => {
+    const dp = depto(t.departamentoId);
+    const resp = usuario(t.responsavelId);
+    const detalhes = [
+      dp ? escapeHtml(dp.nome) : null,
+      resp ? escapeHtml(resp.nome) : null,
+      'concluída em ' + (t.concluidoEm ? formatarData(t.concluidoEm) : '—'),
+      'arquivada em ' + (t.arquivadaEm ? formatarDataHora(t.arquivadaEm) : '—')
+    ].filter(Boolean).join(' · ');
+    return `
+    <div class="list-row">
+      <div class="list-row-info">
+        <div class="list-row-name">${escapeHtml(t.titulo)}</div>
+        <div class="list-row-sub">${detalhes}</div>
+      </div>
+      <button class="btn btn-sm" data-restaurar="${t.id}">↩️ Restaurar</button>
+    </div>`;
+  }).join('') + `</div>`;
+
+  board.querySelectorAll('[data-restaurar]').forEach(b => b.addEventListener('click', () => restaurarTarefa(b.dataset.restaurar)));
+}
+
+const SVG_EMAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></svg>';
+
+function criarCardEl(t){
+  const el = document.createElement('div');
+  const atrasada = isOverdue(t);
+  el.className = 'card' + (atrasada ? ' overdue' : '');
+  el.draggable = true;
+  el.dataset.taskId = t.id;
+
+  const dp = depto(t.departamentoId);
+  const resp = usuario(t.responsavelId);
+  const reu = reuniao(t.reuniaoId);
+  const colDaTarefa = coluna(t.colunaId);
+  const podeArquivar = colDaTarefa && colDaTarefa.final && !t.arquivada;
+
+  // borda lateral: cor da prioridade, vermelho quando atrasada (sinal de alerta sempre vence)
+  el.style.borderLeftColor = atrasada ? 'var(--danger)' : (CORES_PRIORIDADE[t.prioridade] || 'var(--v3)');
+
+  let tagsHtml = '';
+  if (dp) tagsHtml += `<span class="tag" style="background:${dp.cor}">${escapeHtml(dp.nome)}</span>`;
+  if (reu) tagsHtml += `<span class="tag tag-outline" style="color:#78909C;border-color:#78909C">🗓️ ${escapeHtml(reu.titulo)}</span>`;
+
+  el.innerHTML = `
+    <div class="card-tags">${tagsHtml}</div>
+    <div class="card-title">${escapeHtml(t.titulo)}</div>
+    ${resp ? `<div class="card-assignee-row" title="${escapeHtml(resp.nome)}">👤 <span>${escapeHtml(resp.nome)}</span></div>` : ''}
+    <div class="card-footer-row">
+      <div class="card-meta-left">
+        ${t.prazo ? `<span class="card-due">Data de Entrega: ${formatarData(t.prazo)}</span>` : ''}
+      </div>
+      <div class="card-actions">
+        ${podeArquivar ? `<button data-arquivar="${t.id}" title="Arquivar tarefa">📦</button>` : ''}
+        <button data-quickmail="${t.id}" title="Enviar e-mail">${SVG_EMAIL}</button>
+      </div>
+    </div>
+  `;
+  return el;
+}
+
+const CORES_PRIORIDADE = { baixa: '#43A047', media: '#FFB300', alta: '#E53935', urgente: '#7B1F1F' };
+function labelPrioridade(p){
+  return { baixa:'Baixa', media:'Média', alta:'Alta', urgente:'Urgente' }[p] || p;
+}
+function formatarData(iso){
+  if (!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}`;
+}
+
+/* ═══════════════════════ DRAG & DROP: CARDS ═══════════════════════ */
+let draggedTaskId = null;
+let draggedColId = null;
+
+function ligarEventosBoard(){
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      draggedTaskId = card.dataset.taskId;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => { card.classList.remove('dragging'); draggedTaskId = null; });
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      abrirModalTarefa(card.dataset.taskId);
+    });
+  });
+
+  document.querySelectorAll('[data-quickmail]').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    enviarEmail(state.tarefas.find(t=>t.id===b.dataset.quickmail));
+  }));
+  document.querySelectorAll('[data-arquivar]').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    arquivarTarefa(b.dataset.arquivar);
+  }));
+
+  document.querySelectorAll('.column-body').forEach(body => {
+    body.addEventListener('dragover', e => {
+      e.preventDefault();
+      const afterEl = elementoAposCursor(body, e.clientY);
+      const dragging = document.querySelector('.card.dragging');
+      if (!dragging) return;
+      if (afterEl == null) body.appendChild(dragging);
+      else body.insertBefore(dragging, afterEl);
+    });
+    body.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!draggedTaskId) return;
+      const novaColId = body.dataset.colId;
+      const t = state.tarefas.find(x=>x.id===draggedTaskId);
+      const colunaAnterior = t.colunaId;
+      // recalcula ordem de todos os cards nessa coluna a partir do DOM
+      const ids = [...body.querySelectorAll('.card')].map(c=>c.dataset.taskId);
+      ids.forEach((id, idx) => {
+        const tt = state.tarefas.find(x=>x.id===id);
+        tt.colunaId = novaColId;
+        tt.ordem = idx;
+      });
+      persistir();
+      api.enviar('moverTarefa', { id: t.id, colunaId: t.colunaId, ordem: t.ordem });
+      if (colunaAnterior !== novaColId) {
+        const colDestino = coluna(novaColId);
+        const colOrigem = coluna(colunaAnterior);
+        registrarHistorico('tarefa', t.id, 'mover', `Moveu de "${colOrigem?colOrigem.nome:'?'}" para "${colDestino?colDestino.nome:'?'}"`);
+        if (colDestino && colDestino.final) {
+          t.concluidoEm = todayISO();
+          persistir();
+          api.enviar('salvarTarefa', { dado: t });
+          if (state.config.autoNotify) notificarConclusao(t);
+          if (!(colOrigem && colOrigem.final)) verificarArquivamentoAutomatico(t);
+        } else if (t.concluidoEm) {
+          t.concluidoEm = null;
+          persistir();
+          api.enviar('salvarTarefa', { dado: t });
+        }
+      }
+      render();
+    });
+  });
+
+  document.querySelectorAll('[data-addcard]').forEach(b => b.addEventListener('click', () => {
+    abrirModalTarefa(null, b.dataset.addcard);
+  }));
+
+  document.querySelectorAll('.col-name').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const c = coluna(inp.dataset.col);
+      c.nome = inp.value.trim() || c.nome;
+      persistir();
+      api.enviar('salvarColuna', { dado: c });
+    });
+  });
+
+  document.querySelectorAll('[data-colmenu]').forEach(b => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    abrirMenuColuna(b.dataset.colmenu, b);
+  }));
+
+  // drag de colunas (reordenar)
+  document.querySelectorAll('.column-header').forEach(header => {
+    header.addEventListener('dragstart', e => {
+      draggedColId = header.parentElement.dataset.colId;
+      e.stopPropagation();
+    });
+    header.parentElement.addEventListener('dragover', e => {
+      if (!draggedColId) return;
+      e.preventDefault();
+    });
+    header.parentElement.addEventListener('drop', e => {
+      if (!draggedColId) return;
+      e.stopPropagation();
+      const alvoId = header.parentElement.dataset.colId;
+      if (alvoId === draggedColId) return;
+      const cols = [...state.colunas].sort((a,b)=>a.ordem-b.ordem);
+      const origem = cols.findIndex(c=>c.id===draggedColId);
+      const destino = cols.findIndex(c=>c.id===alvoId);
+      const [mov] = cols.splice(origem,1);
+      cols.splice(destino,0,mov);
+      cols.forEach((c,idx)=>c.ordem=idx);
+      persistir();
+      draggedColId = null;
+      render();
+    });
+  });
+
+}
+
+function elementoAposCursor(container, y){
+  const els = [...container.querySelectorAll('.card:not(.dragging)')];
+  return els.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height/2;
+    if (offset < 0 && offset > closest.offset) return { offset, element: child };
+    return closest;
+  }, { offset: -Infinity, element: null }).element;
+}
+
+function abrirMenuColuna(colId, btnEl){
+  const c = coluna(colId);
+  const acoes = [
+    c.final ? 'Desmarcar como coluna de conclusão' : 'Marcar como coluna de conclusão',
+    `Definir limite de WIP (atual: ${c.limite > 0 ? c.limite : 'sem limite'})`,
+    'Excluir coluna'
+  ];
+  const escolha = prompt('Coluna "' + c.nome + '":\n' + acoes.map((a,i)=>`${i+1} - ${a}`).join('\n') + '\n\nDigite o número:');
+  if (escolha === '1') {
+    c.final = !c.final;
+    persistir(); api.enviar('salvarColuna', { dado: c }); render();
+  } else if (escolha === '2') {
+    const novoLimite = prompt('Limite de tarefas "em andamento" nesta coluna (0 = sem limite):', c.limite || 0);
+    if (novoLimite === null) return;
+    const n = parseInt(novoLimite, 10);
+    c.limite = isNaN(n) || n < 0 ? 0 : n;
+    persistir(); api.enviar('salvarColuna', { dado: c }); render();
+  } else if (escolha === '3') {
+    if (state.tarefas.some(t=>t.colunaId===colId)) {
+      toast('Mova ou exclua as tarefas dessa coluna antes de removê-la.', true);
+      return;
+    }
+    state.colunas = state.colunas.filter(x=>x.id!==colId);
+    persistir(); api.enviar('removerColuna', { id: colId }); render();
+  }
+}
+
+/* ═══════════════════════ MODAL: TAREFA ═══════════════════════ */
+let tarefaEmEdicaoId = null;
+let checklistTemp = [];
+
+function preencherSelectsTarefa(){
+  const dSel = document.getElementById('tDepto');
+  dSel.innerHTML = '<option value="">— Selecione —</option>' + state.departamentos.map(d=>`<option value="${d.id}">${escapeHtml(d.nome)}</option>`).join('');
+  const uSel = document.getElementById('tResponsavel');
+  uSel.innerHTML = '<option value="">— Ninguém —</option>' + responsaveisSelecionaveis().map(u=>`<option value="${u.id}">${escapeHtml(nomeExibicaoUsuario(u))}</option>`).join('');
+  const cSel = document.getElementById('tColuna');
+  cSel.innerHTML = [...state.colunas].sort((a,b)=>a.ordem-b.ordem).map(c=>`<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('');
+  const rSel = document.getElementById('tReuniao');
+  rSel.innerHTML = '<option value="">— Nenhuma —</option>' + state.reunioes.map(r=>`<option value="${r.id}">${escapeHtml(r.titulo)}</option>`).join('');
+}
+
+function abrirModalTarefa(taskId, colunaPadrao){
+  preencherSelectsTarefa();
+  tarefaEmEdicaoId = taskId;
+  const modal = document.getElementById('modalTarefa');
+  const btnExcluir = document.getElementById('btnExcluirTarefa');
+  const notifyBox = document.getElementById('tNotifyBox');
+  const comentariosBox = document.getElementById('tComentariosBox');
+  const historicoBox = document.getElementById('tHistoricoBox');
+
+  if (taskId) {
+    const t = state.tarefas.find(x=>x.id===taskId);
+    document.getElementById('tarefaModalTitulo').textContent = 'Editar Tarefa';
+    document.getElementById('tTitulo').value = t.titulo;
+    document.getElementById('tDescricao').value = t.descricao || '';
+    document.getElementById('tDepto').value = t.departamentoId || '';
+    document.getElementById('tResponsavel').value = t.responsavelId || '';
+    document.getElementById('tPrioridade').value = t.prioridade || 'media';
+    document.getElementById('tPrazo').value = t.prazo || '';
+    document.getElementById('tColuna').value = t.colunaId;
+    document.getElementById('tReuniao').value = t.reuniaoId || '';
+    document.getElementById('tRecorrenciaTipo').value = (t.recorrencia && t.recorrencia.tipo) || 'nenhuma';
+    document.getElementById('tRecorrenciaDia').value = (t.recorrencia && t.recorrencia.diaBase) || '';
+    document.getElementById('tRecorrenciaDiaBox').style.display = document.getElementById('tRecorrenciaTipo').value === 'mensal' ? '' : 'none';
+    checklistTemp = JSON.parse(JSON.stringify(t.checklist || []));
+    btnExcluir.style.display = '';
+    notifyBox.style.display = '';
+    comentariosBox.style.display = '';
+    historicoBox.style.display = '';
+    renderComentariosTarefa(taskId);
+    renderHistoricoTarefa(taskId);
+  } else {
+    document.getElementById('tarefaModalTitulo').textContent = 'Nova Tarefa';
+    document.getElementById('tTitulo').value = '';
+    document.getElementById('tDescricao').value = '';
+    document.getElementById('tDepto').value = usuarioAtual() ? usuarioAtual().departamentoId : '';
+    document.getElementById('tResponsavel').value = '';
+    document.getElementById('tPrioridade').value = 'media';
+    document.getElementById('tPrazo').value = '';
+    document.getElementById('tColuna').value = colunaPadrao || (state.colunas[0] && state.colunas[0].id);
+    document.getElementById('tReuniao').value = '';
+    document.getElementById('tRecorrenciaTipo').value = 'nenhuma';
+    document.getElementById('tRecorrenciaDia').value = '';
+    document.getElementById('tRecorrenciaDiaBox').style.display = 'none';
+    checklistTemp = [];
+    btnExcluir.style.display = 'none';
+    notifyBox.style.display = 'none';
+    comentariosBox.style.display = 'none';
+    historicoBox.style.display = 'none';
+  }
+  renderChecklistTemp();
+  abrirModal(modal);
+}
+
+document.getElementById('tRecorrenciaTipo').addEventListener('change', () => {
+  document.getElementById('tRecorrenciaDiaBox').style.display =
+    document.getElementById('tRecorrenciaTipo').value === 'mensal' ? '' : 'none';
+});
+
+function renderComentariosTarefa(taskId){
+  const t = state.tarefas.find(x=>x.id===taskId);
+  const box = document.getElementById('tComentariosList');
+  const comentarios = (t && t.comentarios) || [];
+  if (!comentarios.length) { box.innerHTML = '<div class="help-text">Nenhum comentário ainda.</div>'; return; }
+  box.innerHTML = [...comentarios].sort((a,b)=>a.ts.localeCompare(b.ts)).map(c => {
+    const u = usuario(c.usuarioId);
+    return `<div class="comentario-entry">
+      <div class="comentario-entry-meta"><strong>${escapeHtml(u?u.nome:'Alguém')}</strong> — ${formatarDataHora(c.ts)}</div>
+      ${escapeHtml(c.texto)}
+    </div>`;
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
+
+document.getElementById('btnEnviarComentario').addEventListener('click', () => {
+  const input = document.getElementById('tNovoComentario');
+  const texto = input.value.trim();
+  if (!texto) return;
+  if (!state.config.currentUserId) { toast('Identifique-se antes de comentar.', true); return; }
+  if (!tarefaEmEdicaoId) return;
+  const t = state.tarefas.find(x=>x.id===tarefaEmEdicaoId);
+  if (!t) return;
+  if (!t.comentarios) t.comentarios = [];
+  t.comentarios.push({ id: uid('cm'), usuarioId: state.config.currentUserId, texto, ts: new Date().toISOString() });
+  persistir();
+  api.enviar('salvarTarefa', { dado: t });
+  input.value = '';
+  renderComentariosTarefa(tarefaEmEdicaoId);
+  render();
+});
+
+function renderHistoricoTarefa(taskId){
+  const box = document.getElementById('tHistoricoList');
+  const entries = historicoDaTarefa(taskId);
+  if (!entries.length) { box.innerHTML = '<div class="help-text">Nenhum evento registrado ainda.</div>'; return; }
+  box.innerHTML = entries.map(h => {
+    const u = usuario(h.usuarioId);
+    return `<div class="historico-entry">
+      <strong>${escapeHtml(u?u.nome:'Sistema')}</strong> — ${escapeHtml(h.detalhes)}
+      <div class="historico-entry-meta">${formatarDataHora(h.ts)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderChecklistTemp(){
+  const box = document.getElementById('tChecklistItems');
+  box.innerHTML = '';
+  checklistTemp.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'checklist-item';
+    row.innerHTML = `
+      <input type="checkbox" ${item.feito?'checked':''} data-check="${item.id}"/>
+      <input type="text" value="${escapeHtml(item.texto)}" data-text="${item.id}"/>
+      <button data-del="${item.id}">✕</button>
+    `;
+    box.appendChild(row);
+  });
+  box.querySelectorAll('[data-check]').forEach(cb => cb.addEventListener('change', () => {
+    checklistTemp.find(i=>i.id===cb.dataset.check).feito = cb.checked;
+  }));
+  box.querySelectorAll('[data-text]').forEach(inp => inp.addEventListener('input', () => {
+    checklistTemp.find(i=>i.id===inp.dataset.text).texto = inp.value;
+  }));
+  box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+    checklistTemp = checklistTemp.filter(i=>i.id!==b.dataset.del);
+    renderChecklistTemp();
+  }));
+}
+
+document.getElementById('btnAddChecklistItem').addEventListener('click', () => {
+  checklistTemp.push({ id: uid('ci'), texto: '', feito: false });
+  renderChecklistTemp();
+});
+
+/* ═══════════════════════ ITENS DA NOVA REUNIÃO (com autocompletar) ═══════════════════════ */
+let reuniaoItensTemp = [];
+function novoItemReuniao(){
+  return { id: uid('ri'), departamentoId: '', departamentoTexto: '', responsavelId: '', responsavelTexto: '', titulo: '', prazo: '' };
+}
+
+function normalizarTexto(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+/* Autocompleta o campo com o primeiro item da lista cujo nome comece com o texto digitado,
+   preenchendo o restante do nome já selecionado (para continuar digitando ou apagar).
+   Em exclusões (Backspace/Delete) não sugere, só resolve se o texto já bater exatamente. */
+function autocompletarInput(inputEl, e, lista, getNome){
+  const val = inputEl.value;
+  const isDeleting = e.inputType && e.inputType.indexOf('delete') === 0;
+  if (!val || isDeleting) {
+    return lista.find(item => normalizarTexto(getNome(item)) === normalizarTexto(val)) || null;
+  }
+  const valNorm = normalizarTexto(val);
+  const match = lista.find(item => normalizarTexto(getNome(item)).startsWith(valNorm));
+  if (!match) return null;
+  const nome = getNome(match);
+  if (normalizarTexto(nome) !== valNorm) {
+    inputEl.value = val + nome.slice(val.length);
+    inputEl.setSelectionRange(val.length, nome.length);
+  }
+  return match;
+}
+
+function renderReuniaoItens(){
+  const box = document.getElementById('reuniaoItensBox');
+  box.innerHTML = '';
+  reuniaoItensTemp.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'reuniao-item-row';
+    row.innerHTML = `
+      <input type="text" placeholder="Departamento" autocomplete="off" data-row="${item.id}" data-field="depto" value="${escapeHtml(item.departamentoTexto)}"/>
+      <input type="text" placeholder="Nome da tarefa" data-row="${item.id}" data-field="titulo" value="${escapeHtml(item.titulo)}"/>
+      <input type="text" placeholder="Responsável" autocomplete="off" data-row="${item.id}" data-field="responsavel" value="${escapeHtml(item.responsavelTexto)}"/>
+      <input type="date" data-row="${item.id}" data-field="prazo" value="${item.prazo}"/>
+      <button type="button" data-del="${item.id}" title="Remover item">✕</button>
+    `;
+    box.appendChild(row);
+  });
+
+  box.querySelectorAll('[data-field="titulo"]').forEach(inp => inp.addEventListener('input', () => {
+    reuniaoItensTemp.find(i=>i.id===inp.dataset.row).titulo = inp.value;
+  }));
+  box.querySelectorAll('[data-field="prazo"]').forEach(inp => inp.addEventListener('input', () => {
+    reuniaoItensTemp.find(i=>i.id===inp.dataset.row).prazo = inp.value;
+  }));
+  box.querySelectorAll('[data-field="depto"]').forEach(inp => inp.addEventListener('input', e => {
+    const item = reuniaoItensTemp.find(i=>i.id===inp.dataset.row);
+    const match = autocompletarInput(inp, e, state.departamentos, d => d.nome);
+    item.departamentoTexto = inp.value;
+    item.departamentoId = match ? match.id : '';
+  }));
+  box.querySelectorAll('[data-field="responsavel"]').forEach(inp => inp.addEventListener('input', e => {
+    const item = reuniaoItensTemp.find(i=>i.id===inp.dataset.row);
+    const match = autocompletarInput(inp, e, responsaveisSelecionaveis(), u => u.nome);
+    item.responsavelTexto = inp.value;
+    item.responsavelId = match ? match.id : '';
+  }));
+  box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
+    reuniaoItensTemp = reuniaoItensTemp.filter(i=>i.id!==b.dataset.del);
+    if (!reuniaoItensTemp.length) reuniaoItensTemp.push(novoItemReuniao());
+    renderReuniaoItens();
+  }));
+}
+
+document.getElementById('btnAddReuniaoItem').addEventListener('click', () => {
+  reuniaoItensTemp.push(novoItemReuniao());
+  renderReuniaoItens();
+});
+
+document.getElementById('btnSalvarTarefa').addEventListener('click', () => {
+  const titulo = document.getElementById('tTitulo').value.trim();
+  if (!titulo) { toast('Informe um título para a tarefa.', true); return; }
+  if (!document.getElementById('tDepto').value) { toast('Selecione o departamento.', true); return; }
+  if (!document.getElementById('tResponsavel').value) { toast('Selecione o responsável.', true); return; }
+  if (!document.getElementById('tPrazo').value) { toast('Informe o prazo.', true); return; }
+
+  const existente = tarefaEmEdicaoId ? state.tarefas.find(t=>t.id===tarefaEmEdicaoId) : null;
+  const antes = existente ? JSON.parse(JSON.stringify(existente)) : null;
+  const respAntes = existente ? existente.responsavelId : null;
+
+  const tipoRec = document.getElementById('tRecorrenciaTipo').value;
+  const diaRec = parseInt(document.getElementById('tRecorrenciaDia').value, 10);
+  const recorrencia = (tipoRec === 'mensal' && diaRec)
+    ? { tipo: 'mensal', diaBase: Math.min(Math.max(diaRec, 1), 28) }
+    : { tipo: 'nenhuma' };
+
+  const dado = {
+    id: tarefaEmEdicaoId || uid('t'),
+    titulo,
+    descricao: document.getElementById('tDescricao').value.trim(),
+    departamentoId: document.getElementById('tDepto').value,
+    responsavelId: document.getElementById('tResponsavel').value,
+    colunaId: document.getElementById('tColuna').value,
+    prioridade: document.getElementById('tPrioridade').value,
+    prazo: document.getElementById('tPrazo').value,
+    reuniaoId: document.getElementById('tReuniao').value,
+    checklist: checklistTemp,
+    recorrencia,
+    ultimaGeracaoEm: existente ? (existente.ultimaGeracaoEm || '') : '',
+    comentarios: existente ? (existente.comentarios || []) : [],
+    criadoPor: existente ? existente.criadoPor : (state.config.currentUserId || ''),
+    criadoEm: existente ? existente.criadoEm : todayISO(),
+    concluidoEm: existente ? existente.concluidoEm : null,
+    ordem: existente ? existente.ordem : state.tarefas.filter(t=>t.colunaId===document.getElementById('tColuna').value).length
+  };
+
+  const colunaAnteriorFinal = existente ? !!(coluna(existente.colunaId) && coluna(existente.colunaId).final) : false;
+  const colunaNovaFinal = !!(coluna(dado.colunaId) && coluna(dado.colunaId).final);
+  if (colunaNovaFinal && !colunaAnteriorFinal) dado.concluidoEm = todayISO();
+  else if (!colunaNovaFinal && dado.concluidoEm) dado.concluidoEm = null;
+
+  if (tarefaEmEdicaoId) {
+    const idx = state.tarefas.findIndex(t=>t.id===tarefaEmEdicaoId);
+    state.tarefas[idx] = dado;
+  } else {
+    state.tarefas.push(dado);
+  }
+  persistir();
+  api.enviar('salvarTarefa', { dado });
+
+  if (antes) registrarDiffTarefa(antes, dado);
+  else registrarHistorico('tarefa', dado.id, 'criar', `Tarefa criada: "${dado.titulo}"`);
+
+  if (existente && existente.reuniaoId && existente.reuniaoId !== dado.reuniaoId) sincronizarArquivamentoReuniao(existente.reuniaoId);
+  sincronizarArquivamentoReuniao(dado.reuniaoId);
+
+  fecharModais();
+  render();
+
+  const respMudou = dado.responsavelId && dado.responsavelId !== respAntes;
+  if (respMudou && state.config.autoNotify) {
+    notificarAtribuicao(dado);
+  }
+  toast('Tarefa salva com sucesso.');
+
+  if (colunaNovaFinal && !colunaAnteriorFinal) verificarArquivamentoAutomatico(dado);
+});
+
+document.getElementById('btnExcluirTarefa').addEventListener('click', () => {
+  const t = state.tarefas.find(x=>x.id===tarefaEmEdicaoId);
+  abrirConfirm('Excluir tarefa', 'Tem certeza que deseja excluir esta tarefa? Essa ação não pode ser desfeita.', () => {
+    const titulo = t ? t.titulo : '';
+    state.tarefas = state.tarefas.filter(x=>x.id!==tarefaEmEdicaoId);
+    registrarHistorico('tarefa', tarefaEmEdicaoId, 'excluir', `Tarefa excluída: "${titulo}"`);
+    persistir();
+    api.enviar('removerTarefa', { id: tarefaEmEdicaoId });
+    fecharModais();
+    render();
+    toast('Tarefa excluída.');
+  });
+});
+
+document.getElementById('btnNotifyEmail').addEventListener('click', () => {
+  const t = montarTarefaFormAtual();
+  enviarEmail(t);
+});
+function montarTarefaFormAtual(){
+  return {
+    id: tarefaEmEdicaoId,
+    titulo: document.getElementById('tTitulo').value.trim(),
+    descricao: document.getElementById('tDescricao').value.trim(),
+    departamentoId: document.getElementById('tDepto').value,
+    responsavelId: document.getElementById('tResponsavel').value,
+    prioridade: document.getElementById('tPrioridade').value,
+    prazo: document.getElementById('tPrazo').value,
+  };
+}
+
+/* ═══════════════════════ NOTIFICAÇÕES: E-MAIL ═══════════════════════ */
+function textoNotificacao(t){
+  const resp = usuario(t.responsavelId);
+  const dp = depto(t.departamentoId);
+  let corpo = `Olá${resp ? ' ' + resp.nome.split(' ')[0] : ''}, você tem uma tarefa no quadro TerraZoo:\n\n`;
+  corpo += `Tarefa: ${t.titulo}\n`;
+  if (dp) corpo += `Departamento: ${dp.nome}\n`;
+  if (t.prioridade) corpo += `Prioridade: ${labelPrioridade(t.prioridade)}\n`;
+  if (t.prazo) corpo += `Prazo: ${t.prazo.split('-').reverse().join('/')}\n`;
+  if (t.descricao) corpo += `\nDetalhes: ${t.descricao}\n`;
+  return corpo;
+}
+
+function enviarEmail(t){
+  if (!t) return;
+  const resp = usuario(t.responsavelId);
+  if (!resp || !resp.email) {
+    toast('O responsável não tem e-mail cadastrado.', true);
+    return;
+  }
+  if (api.remoto) {
+    api.enviar('notificarEmail', { id: t.id }).then(r => {
+      if (r && r.ok) toast('E-mail enviado automaticamente para ' + resp.nome + '.');
+      else toast('Não foi possível enviar o e-mail pelo backend.', true);
+    });
+  } else {
+    const assunto = encodeURIComponent('Tarefa TerraZoo: ' + t.titulo);
+    const corpo = encodeURIComponent(textoNotificacao(t));
+    window.open(`mailto:${resp.email}?subject=${assunto}&body=${corpo}`, '_blank');
+    toast('Abrindo seu programa de e-mail para ' + resp.nome + '...');
+  }
+}
+
+function notificarAtribuicao(t){
+  toast('Notificar ' + (usuario(t.responsavelId)||{}).nome + ' sobre esta tarefa?', false, '✉️ E-mail', () => enviarEmail(t));
+}
+function notificarConclusao(t){
+  const criador = usuario(t.criadoPor);
+  if (criador && criador.email) {
+    toast('Tarefa "' + t.titulo + '" concluída.', false, '✉️ Avisar quem criou', () => enviarEmail(Object.assign({},t,{responsavelId:t.criadoPor})));
+  }
+}
+
+/* ═══════════════════════ MODAL: DEPARTAMENTOS ═══════════════════════ */
+function renderDeptoList(){
+  const box = document.getElementById('deptoList');
+  if (!state.departamentos.length) { box.innerHTML = '<div class="empty-hint">Nenhum departamento cadastrado.</div>'; return; }
+  box.innerHTML = state.departamentos.map(d => `
+    <div class="list-row">
+      <span class="color-dot" style="background:${d.cor}"></span>
+      <div class="list-row-info"><div class="list-row-name">${escapeHtml(d.nome)}</div></div>
+      ${souAdmin() ? `<button class="btn btn-sm btn-danger" data-deldepto="${d.id}">Excluir</button>` : ''}
+    </div>
+  `).join('');
+  box.querySelectorAll('[data-deldepto]').forEach(b => b.addEventListener('click', () => {
+    if (!souAdmin()) { toast('Somente administradores podem excluir departamentos.', true); return; }
+    const id = b.dataset.deldepto;
+    if (state.tarefas.some(t=>t.departamentoId===id) || state.usuarios.some(u=>u.departamentoId===id)) {
+      toast('Existem usuários ou tarefas vinculados a este departamento.', true);
+      return;
+    }
+    state.departamentos = state.departamentos.filter(d=>d.id!==id);
+    persistir(); api.enviar('removerDepartamento', { id }); renderDeptoList();
+  }));
+}
+
+document.getElementById('btnAddDepto').addEventListener('click', () => {
+  if (!souAdmin()) { toast('Somente administradores podem cadastrar departamentos.', true); return; }
+  const nome = document.getElementById('deptoNome').value.trim();
+  if (!nome) { toast('Informe o nome do departamento.', true); return; }
+  const d = { id: uid('d'), nome, cor: document.getElementById('deptoCor').value };
+  state.departamentos.push(d);
+  persistir(); api.enviar('salvarDepartamento', { dado: d });
+  document.getElementById('deptoNome').value = '';
+  renderDeptoList(); render(); toast('Departamento adicionado.');
+});
+
+/* ═══════════════════════ MODAL: USUÁRIOS / RESPONSÁVEIS ═══════════════════════
+   Mesmo cadastro por baixo (state.usuarios); rótulos e a lista exibida mudam
+   conforme a entrada usada: sidebar "+ Novo Responsável" (exclui o usuário
+   master, que não é atribuível a tarefas) ou Configurações "Gerenciar usuários"
+   (mostra todas as contas, inclusive o master). */
+let usuarioEmEdicaoId = null;
+let modoUsuarioModal = 'usuario';
+const ROTULOS_MODAL_USUARIO = {
+  responsavel: {
+    entidade: 'responsável',
+    titulo: 'Responsáveis',
+    novo: 'Novo responsável',
+    editar: nome => 'Editar responsável — ' + nome,
+    add: '+ Adicionar responsável',
+    listaTitulo: 'Responsáveis cadastrados',
+    vazio: 'Nenhum responsável cadastrado.',
+    toastNovo: 'Responsável cadastrado com a senha definida. Ele deverá trocá-la no primeiro acesso.',
+    toastEditado: 'Responsável atualizado.',
+    excluirMsg: 'Existem tarefas atribuídas a este responsável. Reatribua-as antes de excluir.',
+    somenteAdminExcluir: 'Somente administradores podem excluir responsáveis.'
+  },
+  usuario: {
+    entidade: 'usuário',
+    titulo: 'Usuários',
+    novo: 'Novo usuário',
+    editar: nome => 'Editar usuário — ' + nome,
+    add: '+ Adicionar usuário',
+    listaTitulo: 'Usuários cadastrados',
+    vazio: 'Nenhum usuário cadastrado.',
+    toastNovo: `Usuário cadastrado. Senha padrão: ${'{SENHA}'} (troca obrigatória no primeiro acesso).`,
+    toastEditado: 'Usuário atualizado.',
+    excluirMsg: 'Existem tarefas atribuídas a este usuário. Reatribua-as antes de excluir.',
+    somenteAdminExcluir: 'Somente administradores podem excluir usuários.'
+  }
+};
+function rotulosAtuais(){ return ROTULOS_MODAL_USUARIO[modoUsuarioModal]; }
+
+function renderUsuarioList(){
+  const R = rotulosAtuais();
+  const box = document.getElementById('usuarioList');
+  document.getElementById('usrListTitulo').textContent = R.listaTitulo;
+  const lista = modoUsuarioModal === 'responsavel' ? state.usuarios.filter(u => !u.master) : state.usuarios;
+  if (!lista.length) { box.innerHTML = `<div class="empty-hint">${R.vazio}</div>`; return; }
+  const ehResponsavelLista = modoUsuarioModal === 'responsavel';
+  box.innerHTML = lista.map(u => {
+    const dp = depto(u.departamentoId);
+    const subInfo = ehResponsavelLista
+      ? `${u.funcao ? escapeHtml(u.funcao)+' · ' : ''}${escapeHtml(u.email||'sem e-mail')} · ${dp?escapeHtml(dp.nome):'sem departamento'}`
+      : escapeHtml(u.email||'sem e-mail');
+    return `
+    <div class="list-row">
+      <span class="avatar-sm" style="background:${dp?dp.cor:'#4CAF50'}">${iniciais(u.nome)}</span>
+      <div class="list-row-info">
+        <div class="list-row-name">${escapeHtml(u.nome)} ${u.cargo==='admin'?'<span class="badge">Admin</span>':''} ${u.master?'<span class="badge" style="background:#FFF3CD;color:#7a5b00" title="Usuário master, configurado no código">🔑 Master</span>':''}</div>
+        <div class="list-row-sub">${subInfo}</div>
+      </div>
+      ${(souAdmin() || u.id === state.config.currentUserId) ? `<button class="btn btn-sm" data-editusr="${u.id}">Editar</button>` : ''}
+      ${souAdmin() ? `<button class="btn btn-sm" data-resetsenha="${u.id}" title="Volta a senha para o padrão (${SENHA_PADRAO}) e exige troca no próximo acesso">🔑 Redefinir senha</button>` : ''}
+      ${(!u.master && souAdmin()) ? `<button class="btn btn-sm btn-danger" data-delusr="${u.id}">Excluir</button>` : ''}
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-editusr]').forEach(b => b.addEventListener('click', () => abrirEdicaoUsuario(b.dataset.editusr)));
+  box.querySelectorAll('[data-resetsenha]').forEach(b => b.addEventListener('click', async () => {
+    if (!souAdmin()) { toast('Somente administradores podem redefinir senhas.', true); return; }
+    const u = usuario(b.dataset.resetsenha);
+    if (!u) return;
+    u.senha = await hashSenha(SENHA_PADRAO);
+    u.precisaTrocarSenha = true;
+    persistir(); api.enviar('salvarUsuario', { dado: u });
+    toast(`Senha de ${u.nome} redefinida para o padrão (${SENHA_PADRAO}).`);
+  }));
+  box.querySelectorAll('[data-delusr]').forEach(b => b.addEventListener('click', () => {
+    if (!souAdmin()) { toast(rotulosAtuais().somenteAdminExcluir, true); return; }
+    const id = b.dataset.delusr;
+    if (state.tarefas.some(t=>t.responsavelId===id)) {
+      toast(rotulosAtuais().excluirMsg, true);
+      return;
+    }
+    state.usuarios = state.usuarios.filter(u=>u.id!==id);
+    persistir(); api.enviar('removerUsuario', { id }); renderUsuarioList();
+  }));
+}
+
+function preencherSelectDeptoUsuario(){
+  const sel = document.getElementById('usrDepto');
+  sel.innerHTML = '<option value="">— Sem departamento —</option>' + state.departamentos.map(d=>`<option value="${d.id}">${escapeHtml(d.nome)}</option>`).join('');
+}
+
+/* Alterna quais campos aparecem no formulário conforme o modo (responsável x usuário)
+   e conforme está criando ou editando (rótulo/ajuda do campo de senha). */
+function aplicarVisibilidadeCamposUsuario(){
+  const ehResponsavel = modoUsuarioModal === 'responsavel';
+  document.getElementById('usrDeptoGroup').style.display = ehResponsavel ? '' : 'none';
+  document.getElementById('usrCargoPermissaoGroup').style.display = ehResponsavel ? 'none' : '';
+  document.getElementById('usrCargoFuncaoGroup').style.display = ehResponsavel ? '' : 'none';
+  document.getElementById('usrSenhaGroup').style.display = ehResponsavel ? '' : 'none';
+  document.getElementById('usrSenhaLabel').textContent = usuarioEmEdicaoId ? 'Nova senha (deixe em branco para manter)' : 'Senha de acesso';
+  document.getElementById('usrSenhaAjuda').textContent = usuarioEmEdicaoId
+    ? 'Preencha somente se quiser redefinir a senha deste responsável.'
+    : 'Defina a senha inicial deste responsável. Ele deverá trocá-la no primeiro acesso.';
+  // cadastrar novo usuário/responsável é restrito a administradores; editar um já existente não.
+  document.getElementById('btnAddUsuario').disabled = !usuarioEmEdicaoId && !souAdmin();
+}
+
+function abrirEdicaoUsuario(id){
+  const u = usuario(id);
+  if (!u) return;
+  if (!souAdmin() && id !== state.config.currentUserId) {
+    toast('Você só pode editar seu próprio cadastro.', true);
+    return;
+  }
+  usuarioEmEdicaoId = id;
+  document.getElementById('usrNome').value = u.nome || '';
+  document.getElementById('usrEmail').value = u.email || '';
+  document.getElementById('usrDepto').value = u.departamentoId || '';
+  document.getElementById('usrCargoPermissao').value = u.cargo || 'membro';
+  document.getElementById('usrCargoPermissao').disabled = !souAdmin();
+  document.getElementById('usrCargoFuncao').value = u.funcao || '';
+  document.getElementById('usrSenha').value = '';
+  document.getElementById('usrFormTitulo').textContent = rotulosAtuais().editar(u.nome);
+  document.getElementById('btnAddUsuario').textContent = 'Salvar alterações';
+  document.getElementById('btnCancelarEdicaoUsuario').style.display = '';
+  aplicarVisibilidadeCamposUsuario();
+}
+
+function resetFormularioUsuario(){
+  const R = rotulosAtuais();
+  usuarioEmEdicaoId = null;
+  ['usrNome','usrEmail','usrCargoFuncao','usrSenha'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('usrDepto').value = '';
+  document.getElementById('usrCargoPermissao').value = 'membro';
+  document.getElementById('usrCargoPermissao').disabled = !souAdmin();
+  document.getElementById('usrFormTitulo').textContent = R.novo;
+  document.getElementById('btnAddUsuario').textContent = R.add;
+  document.getElementById('btnCancelarEdicaoUsuario').style.display = 'none';
+  aplicarVisibilidadeCamposUsuario();
+}
+
+document.getElementById('btnCancelarEdicaoUsuario').addEventListener('click', resetFormularioUsuario);
+
+document.getElementById('btnAddUsuario').addEventListener('click', async () => {
+  const R = rotulosAtuais();
+  const ehResponsavel = modoUsuarioModal === 'responsavel';
+  if (!usuarioEmEdicaoId && !souAdmin()) {
+    toast(`Somente administradores podem cadastrar ${ehResponsavel ? 'responsáveis' : 'usuários'}.`, true);
+    return;
+  }
+  const nome = document.getElementById('usrNome').value.trim();
+  if (!nome) { toast(`Informe o nome do ${R.entidade}.`, true); return; }
+  const email = document.getElementById('usrEmail').value.trim();
+  if (!email) { toast(`Informe o e-mail — é com ele que o ${R.entidade} entra no sistema.`, true); return; }
+  const emailDuplicado = state.usuarios.some(u => u.id !== usuarioEmEdicaoId && (u.email||'').toLowerCase() === email.toLowerCase());
+  if (emailDuplicado) { toast(`Já existe um ${R.entidade} cadastrado com este e-mail.`, true); return; }
+
+  const senhaDigitada = document.getElementById('usrSenha').value;
+  if (ehResponsavel && !usuarioEmEdicaoId && !senhaDigitada) {
+    toast('Defina uma senha de acesso para o responsável.', true);
+    return;
+  }
+  if (ehResponsavel && senhaDigitada && senhaDigitada.length < 6) {
+    toast('A senha deve ter ao menos 6 caracteres.', true);
+    return;
+  }
+
+  const campos = { nome, email };
+  if (ehResponsavel) {
+    campos.departamentoId = document.getElementById('usrDepto').value;
+    campos.funcao = document.getElementById('usrCargoFuncao').value.trim();
+  } else {
+    campos.cargo = document.getElementById('usrCargoPermissao').value;
+  }
+
+  let u;
+  if (usuarioEmEdicaoId) {
+    const idx = state.usuarios.findIndex(x=>x.id===usuarioEmEdicaoId);
+    if (idx === -1) { resetFormularioUsuario(); return; }
+    if (!ehResponsavel && !souAdmin()) campos.cargo = state.usuarios[idx].cargo;
+    u = Object.assign({}, state.usuarios[idx], campos);
+    if (senhaDigitada) { u.senha = await hashSenha(senhaDigitada); u.precisaTrocarSenha = true; }
+    state.usuarios[idx] = u;
+  } else {
+    // Responsável nunca ganha permissão de admin por este formulário; isso só se
+    // define pela tela de Usuários (Configurações). A senha é sempre definida por
+    // quem cadastra — para responsável, não existe mais uma senha padrão automática.
+    if (ehResponsavel) campos.cargo = 'membro';
+    u = Object.assign({ id: uid('u'), ativo: true, precisaTrocarSenha: true }, campos);
+    u.senha = ehResponsavel ? await hashSenha(senhaDigitada) : await hashSenha(SENHA_PADRAO);
+    state.usuarios.push(u);
+  }
+  persistir(); api.enviar('salvarUsuario', { dado: u });
+  const eraEdicao = !!usuarioEmEdicaoId;
+  resetFormularioUsuario();
+  renderUsuarioList(); render(); renderUserPill();
+  toast(eraEdicao ? R.toastEditado : R.toastNovo.replace('{SENHA}', SENHA_PADRAO));
+});
+
+/* ═══════════════════════ MODAL: REUNIÕES ═══════════════════════ */
+let reuniaoEmEdicaoId = null;
+
+function renderReuniaoList(){
+  const box = document.getElementById('reuniaoList');
+  if (!state.reunioes.length) { box.innerHTML = '<div class="empty-hint">Nenhuma reunião cadastrada.</div>'; return; }
+  box.innerHTML = state.reunioes.map(r => `
+    <div class="list-row">
+      <div class="list-row-info">
+        <div class="list-row-name">${escapeHtml(r.titulo)} ${r.arquivada ? '<span class="badge">Arquivada</span>' : ''}</div>
+        <div class="list-row-sub">${formatarData(r.data)}</div>
+      </div>
+      <button class="btn btn-sm" data-editreuniao="${r.id}">Editar</button>
+      <button class="btn btn-sm btn-danger" data-delreuniao="${r.id}">Excluir</button>
+    </div>
+  `).join('');
+  box.querySelectorAll('[data-editreuniao]').forEach(b => b.addEventListener('click', () => abrirEdicaoReuniao(b.dataset.editreuniao)));
+  box.querySelectorAll('[data-delreuniao]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.delreuniao;
+    if (state.tarefas.some(t=>t.reuniaoId===id)) {
+      toast('Existem tarefas vinculadas a esta reunião. Remova ou reatribua-as antes de excluir.', true);
+      return;
+    }
+    state.reunioes = state.reunioes.filter(r=>r.id!==id);
+    persistir(); api.enviar('removerReuniao', { id });
+    if (reuniaoEmEdicaoId === id) resetFormularioReuniao();
+    renderReuniaoList(); render();
+    toast('Reunião excluída.');
+  }));
+}
+
+function abrirEdicaoReuniao(id){
+  const r = reuniao(id);
+  if (!r) return;
+  reuniaoEmEdicaoId = id;
+  document.getElementById('reuniaoTitulo').value = r.titulo || '';
+  document.getElementById('reuniaoData').value = r.data || '';
+  document.getElementById('reuniaoFormTitulo').textContent = 'Editar reunião — ' + r.titulo;
+  document.getElementById('reuniaoHelpText').style.display = 'none';
+  document.getElementById('reuniaoItensSection').style.display = 'none';
+  document.getElementById('btnCriarReuniao').textContent = 'Salvar alterações';
+  document.getElementById('btnCancelarEdicaoReuniao').style.display = '';
+}
+
+function resetFormularioReuniao(){
+  reuniaoEmEdicaoId = null;
+  document.getElementById('reuniaoTitulo').value = '';
+  document.getElementById('reuniaoData').value = todayISO();
+  document.getElementById('reuniaoFormTitulo').textContent = 'Nova reunião — Checklist';
+  document.getElementById('reuniaoHelpText').style.display = '';
+  document.getElementById('reuniaoItensSection').style.display = '';
+  document.getElementById('btnCriarReuniao').textContent = 'Criar reunião e tarefas';
+  document.getElementById('btnCancelarEdicaoReuniao').style.display = 'none';
+  reuniaoItensTemp = [novoItemReuniao()];
+  renderReuniaoItens();
+}
+
+document.getElementById('btnCancelarEdicaoReuniao').addEventListener('click', resetFormularioReuniao);
+
+document.getElementById('btnCriarReuniao').addEventListener('click', () => {
+  const titulo = document.getElementById('reuniaoTitulo').value.trim();
+  if (!titulo) { toast('Informe o título da reunião.', true); return; }
+  const data = document.getElementById('reuniaoData').value || todayISO();
+
+  if (reuniaoEmEdicaoId) {
+    const r = reuniao(reuniaoEmEdicaoId);
+    if (!r) { resetFormularioReuniao(); return; }
+    r.titulo = titulo;
+    r.data = data;
+    persistir();
+    api.enviar('salvarReuniao', { dado: r });
+    resetFormularioReuniao();
+    renderReuniaoList();
+    render();
+    toast('Reunião atualizada.');
+    return;
+  }
+
+  const itensPreenchidos = reuniaoItensTemp.filter(i =>
+    i.titulo.trim() || i.departamentoTexto.trim() || i.responsavelTexto.trim() || i.prazo
+  );
+  for (const item of itensPreenchidos) {
+    if (!item.titulo.trim()) { toast('Informe o nome da tarefa em todos os itens preenchidos.', true); return; }
+    if (!item.departamentoId) { toast(`Departamento inválido no item "${item.titulo}".`, true); return; }
+    if (!item.responsavelId) { toast(`Responsável inválido no item "${item.titulo}".`, true); return; }
+    if (!item.prazo) { toast(`Informe o prazo do item "${item.titulo}".`, true); return; }
+  }
+
+  const r = { id: uid('r'), titulo, data, arquivada: false, arquivadaEm: null };
+  state.reunioes.push(r);
+  api.enviar('salvarReuniao', { dado: r });
+
+  const primeiraColuna = [...state.colunas].sort((a,b)=>a.ordem-b.ordem)[0];
+  itensPreenchidos.forEach((item, idx) => {
+    const t = {
+      id: uid('t'), titulo: item.titulo.trim(), descricao: '',
+      departamentoId: item.departamentoId, responsavelId: item.responsavelId,
+      colunaId: primeiraColuna.id, prioridade: 'media', prazo: item.prazo, reuniaoId: r.id,
+      criadoPor: state.config.currentUserId, criadoEm: todayISO(), concluidoEm: null,
+      ordem: state.tarefas.filter(x=>x.colunaId===primeiraColuna.id).length + idx, checklist: [],
+      comentarios: [], recorrencia: { tipo: 'nenhuma' }, ultimaGeracaoEm: '',
+      arquivada: false, arquivadaEm: null
+    };
+    state.tarefas.push(t);
+    api.enviar('salvarTarefa', { dado: t });
+  });
+  persistir();
+  renderReuniaoList();
+  fecharModais();
+  render();
+  toast(`Reunião criada com ${itensPreenchidos.length} tarefa(s).`);
+});
+
+/* ═══════════════════════ MODAL: CONFIGURAÇÕES ═══════════════════════ */
+document.getElementById('btnSalvarConfig').addEventListener('click', () => {
+  if (souAdmin()) {
+    state.config.apiUrl = document.getElementById('cfgApiUrl').value.trim();
+  }
+  state.config.autoNotify = document.getElementById('cfgAutoNotify').checked;
+  state.config.arquivarAposDias = Math.max(0, parseInt(document.getElementById('cfgArquivarDias').value, 10) || 0);
+  persistir();
+  fecharModais();
+  if (state.config.apiUrl) sincronizarInicial();
+  else atualizarSyncBadge();
+  toast('Configurações salvas.');
+});
+
+document.getElementById('btnLimparExemplo').addEventListener('click', () => {
+  if (!souAdmin()) { toast('Somente administradores podem remover os dados de exemplo.', true); return; }
+  abrirConfirm('Remover dados de exemplo', 'Isso apagará os usuários, reunião e tarefas de exemplo criados automaticamente na primeira visita. O usuário master (Fadrick Leveghin) e os departamentos da empresa são mantidos. Continuar?', async () => {
+    state.departamentos = [];
+    state.usuarios = [];
+    state.reunioes = [];
+    state.tarefas = [];
+    state.historico = [];
+    state.config.exemploCarregado = false;
+    garantirUsuarioMaster();
+    garantirDepartamentosPadrao();
+    await garantirSenhasPadrao();
+    if (!state.usuarios.some(u=>u.id===state.config.currentUserId)) state.config.currentUserId = '';
+    persistir();
+    fecharModais();
+    render();
+    renderUserPill();
+    toast('Dados de exemplo removidos. Usuário master e departamentos mantidos.');
+  });
+});
+
+document.getElementById('btnConfig').addEventListener('click', () => abrirModalConfig());
+function abrirModalConfig(){
+  document.getElementById('cfgApiUrl').value = state.config.apiUrl || '';
+  document.getElementById('cfgApiUrl').disabled = !souAdmin();
+  document.getElementById('btnLimparExemplo').disabled = !souAdmin();
+  document.getElementById('cfgAutoNotify').checked = state.config.autoNotify !== false;
+  document.getElementById('cfgArquivarDias').value = state.config.arquivarAposDias != null ? state.config.arquivarAposDias : 3;
+  abrirModal(document.getElementById('modalConfig'));
+}
+document.getElementById('btnGerenciarUsuarios').addEventListener('click', () => {
+  fecharModais();
+  abrirModalUsuarios();
+});
+
+/* ═══════════════════════ IDENTIFICAÇÃO DE USUÁRIO ═══════════════════════ */
+function renderUserPill(){
+  const u = usuarioAtual();
+  document.getElementById('sidebarUserAvatar').textContent = u ? iniciais(u.nome) : '?';
+  document.getElementById('sidebarUserName').textContent = u ? u.nome : 'Identificar-se';
+}
+
+let usuarioAutenticandoId = null;
+
+const LS_LOGIN_LEMBRADO = 'tz_login_lembrado';
+function abrirModalIdentidade(){
+  const lembrado = localStorage.getItem(LS_LOGIN_LEMBRADO) || '';
+  document.getElementById('loginEmail').value = lembrado;
+  document.getElementById('loginSenha').value = '';
+  document.getElementById('loginLembrar').checked = !!lembrado;
+  abrirModal(document.getElementById('modalIdentidade'));
+}
+
+/* Usuário master vem sem e-mail hardcoded no código; precisa ser configurado
+   uma única vez, antes de conseguir entrar de fato pela tela de login. */
+function precisaConfigurarMaster(){
+  const m = state.usuarios.find(u => u.master);
+  return !!m && !m.email;
+}
+function abrirModalConfigurarMaster(){
+  document.getElementById('setupMasterEmail').value = '';
+  abrirModal(document.getElementById('modalConfigurarMaster'));
+}
+document.getElementById('btnSalvarConfigMaster').addEventListener('click', () => {
+  const email = document.getElementById('setupMasterEmail').value.trim();
+  if (!email) { toast('Informe o e-mail do usuário master.', true); return; }
+  const m = state.usuarios.find(u => u.master);
+  if (!m) return;
+  m.email = email;
+  persistir();
+  api.enviar('salvarUsuario', { dado: m });
+  fecharModais();
+  abrirModalIdentidade();
+});
+
+/* Clique no rodapé da sidebar abre um menu pequeno (Sair / fechar), em vez de
+   reabrir a tela de login diretamente — evita logar-se "sem querer". */
+document.getElementById('sidebarUser').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!state.config.currentUserId) { abrirModalIdentidade(); return; }
+  document.getElementById('sidebarUserMenu').classList.toggle('open');
+});
+document.getElementById('sidebarUserMenuClose').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('sidebarUserMenu').classList.remove('open');
+});
+document.getElementById('btnSidebarUserSair').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('sidebarUserMenu').classList.remove('open');
+  state.config.currentUserId = '';
+  filtroUsuarioId = '';
+  persistir();
+  renderUserPill();
+  render();
+  abrirModalIdentidade();
+});
+document.addEventListener('click', e => {
+  const menu = document.getElementById('sidebarUserMenu');
+  if (!menu.classList.contains('open')) return;
+  if (!document.getElementById('sidebarUser').contains(e.target)) menu.classList.remove('open');
+});
+
+function finalizarLogin(id){
+  state.config.currentUserId = id;
+  // "Meus itens" por padrão só faz sentido para quem é responsável por tarefas (não para o usuário master)
+  filtroUsuarioId = responsaveisSelecionaveis().some(u => u.id === id) ? id : '';
+  usuarioAutenticandoId = null;
+  persistir();
+  fecharModais();
+  renderUserPill();
+  render();
+}
+
+document.getElementById('btnIdentConfirmar').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const senha = document.getElementById('loginSenha').value;
+  if (!email || !senha) { toast('Informe e-mail e senha.', true); return; }
+  const u = state.usuarios.find(x => (x.email||'').toLowerCase() === email);
+  if (!u) { toast('E-mail não encontrado.', true); return; }
+  if (u.ativo === false) { toast('Este usuário está inativo.', true); return; }
+  const hash = await hashSenha(senha);
+  if (hash !== u.senha) { toast('Senha incorreta.', true); return; }
+  if (document.getElementById('loginLembrar').checked) localStorage.setItem(LS_LOGIN_LEMBRADO, email);
+  else localStorage.removeItem(LS_LOGIN_LEMBRADO);
+  if (u.precisaTrocarSenha) {
+    usuarioAutenticandoId = u.id;
+    fecharModais();
+    document.getElementById('trocarSenhaNova').value = '';
+    document.getElementById('trocarSenhaConfirmar').value = '';
+    abrirModal(document.getElementById('modalTrocarSenha'));
+    return;
+  }
+  finalizarLogin(u.id);
+});
+
+document.getElementById('btnSalvarNovaSenha').addEventListener('click', async () => {
+  const nova = document.getElementById('trocarSenhaNova').value;
+  const conf = document.getElementById('trocarSenhaConfirmar').value;
+  if (!nova || nova.length < 6) { toast('A nova senha deve ter ao menos 6 caracteres.', true); return; }
+  if (nova !== conf) { toast('As senhas não coincidem.', true); return; }
+  const u = usuario(usuarioAutenticandoId);
+  if (!u) { usuarioAutenticandoId = null; fecharModais(); abrirModalIdentidade(); return; }
+  u.senha = await hashSenha(nova);
+  u.precisaTrocarSenha = false;
+  persistir();
+  api.enviar('salvarUsuario', { dado: u });
+  toast('Senha atualizada com sucesso.');
+  finalizarLogin(u.id);
+});
+
+/* ═══════════════════════ ABERTURA DE MODAIS GENÉRICA ═══════════════════════ */
+function abrirModal(el){ el.classList.add('open'); }
+function fecharModais(){ document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open')); }
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', fecharModais));
+const MODAIS_OBRIGATORIOS = ['modalIdentidade', 'modalTrocarSenha', 'modalConfigurarMaster'];
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target !== overlay) return;
+    if (MODAIS_OBRIGATORIOS.includes(overlay.id)) return;
+    fecharModais();
+  });
+});
+
+let confirmCallback = null;
+function abrirConfirm(titulo, texto, cb){
+  document.getElementById('confirmTitulo').textContent = titulo;
+  document.getElementById('confirmTexto').textContent = texto;
+  confirmCallback = cb;
+  abrirModal(document.getElementById('modalConfirm'));
+}
+document.getElementById('btnConfirmOk').addEventListener('click', () => {
+  if (confirmCallback) confirmCallback();
+  fecharModais();
+});
+
+function abrirModalDepartamentos(){
+  renderDeptoList();
+  ['deptoNome','deptoCor','btnAddDepto'].forEach(id => document.getElementById(id).disabled = !souAdmin());
+  abrirModal(document.getElementById('modalDeptos'));
+}
+function abrirModalUsuarios(modo){
+  modoUsuarioModal = modo === 'responsavel' ? 'responsavel' : 'usuario';
+  document.getElementById('modalUsuariosTitulo').textContent = rotulosAtuais().titulo;
+  preencherSelectDeptoUsuario();
+  resetFormularioUsuario();
+  renderUsuarioList();
+  abrirModal(document.getElementById('modalUsuarios'));
+}
+function abrirModalReuniao(){
+  renderReuniaoList();
+  resetFormularioReuniao();
+  abrirModal(document.getElementById('modalReuniao'));
+}
+
+document.getElementById('sidebarActionNovoDepto').addEventListener('click', abrirModalDepartamentos);
+document.getElementById('sidebarActionNovoUsuario').addEventListener('click', () => abrirModalUsuarios('responsavel'));
+document.getElementById('sidebarActionNovaReuniao').addEventListener('click', abrirModalReuniao);
+document.getElementById('btnNovaTarefa').addEventListener('click', () => abrirModalTarefa(null));
+document.getElementById('btnFiltroSemReuniao').addEventListener('click', () => {
+  filtroSemReuniao = !filtroSemReuniao;
+  if (filtroSemReuniao) filtroReuniaoId = '';
+  render();
+});
+document.getElementById('btnFiltroArquivo').addEventListener('click', () => {
+  modoArquivo = !modoArquivo;
+  if (modoArquivo) filtroRelatorioReuniaoId = '';
+  render();
+});
+
+document.getElementById('filterBusca').addEventListener('input', render);
+
+const priorityFilterWrap = document.getElementById('priorityFilter');
+const priorityFilterTrigger = document.getElementById('priorityFilterTrigger');
+const priorityFilterLabel = document.getElementById('priorityFilterLabel');
+priorityFilterTrigger.addEventListener('click', e => {
+  e.stopPropagation();
+  priorityFilterWrap.classList.toggle('open');
+});
+priorityFilterWrap.querySelectorAll('.priority-filter-item').forEach(item => {
+  item.addEventListener('click', () => {
+    filtroPrioridade = item.dataset.prioridade;
+    priorityFilterLabel.textContent = item.textContent;
+    priorityFilterWrap.querySelectorAll('.priority-filter-item').forEach(i => i.classList.toggle('active', i === item));
+    priorityFilterWrap.classList.remove('open');
+    render();
+  });
+});
+document.addEventListener('click', e => {
+  if (!priorityFilterWrap.contains(e.target)) priorityFilterWrap.classList.remove('open');
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (MODAIS_OBRIGATORIOS.some(id => document.getElementById(id).classList.contains('open'))) return;
+  fecharModais();
+});
+
+/* ═══════════════════════ SIDEBAR: MAXIMIZAR/MINIMIZAR E ACORDEÃO ═══════════════════════ */
+const SIDEBAR_LS_KEY = 'tz_sidebar_collapsed';
+const sidebarEl = document.getElementById('sidebar');
+sidebarEl.classList.toggle('collapsed', localStorage.getItem(SIDEBAR_LS_KEY) === '1');
+document.getElementById('btnToggleSidebar').addEventListener('click', () => {
+  const colapsada = sidebarEl.classList.toggle('collapsed');
+  localStorage.setItem(SIDEBAR_LS_KEY, colapsada ? '1' : '0');
+});
+document.querySelectorAll('.sidebar-nav-item').forEach(item => {
+  const row = item.querySelector(':scope > .sidebar-nav-row');
+  const sub = item.querySelector(':scope > .sidebar-sub');
+  if (row && sub) {
+    row.addEventListener('click', () => item.classList.toggle('expanded'));
+  }
+});
+document.getElementById('navBuscar').addEventListener('click', () => {
+  if (sidebarEl.classList.contains('collapsed')) {
+    sidebarEl.classList.remove('collapsed');
+    localStorage.setItem(SIDEBAR_LS_KEY, '0');
+    document.getElementById('filterBusca').focus();
+  }
+});
+
+/* ═══════════════════════ TAREFAS RECORRENTES ═══════════════════════ */
+function gerarTarefasRecorrentes(){
+  const hoje = new Date();
+  const anoMes = hoje.toISOString().slice(0,7);
+  const diaAtual = hoje.getDate();
+  let criouAlguma = false;
+  state.tarefas.slice().forEach(t => {
+    const rec = t.recorrencia;
+    if (!rec || rec.tipo !== 'mensal') return;
+    if (t.ultimaGeracaoEm === anoMes) return;
+    if (diaAtual < rec.diaBase) return;
+    const primeiraColuna = [...state.colunas].sort((a,b)=>a.ordem-b.ordem)[0];
+    const nova = {
+      id: uid('t'), titulo: t.titulo, descricao: t.descricao, departamentoId: t.departamentoId,
+      responsavelId: t.responsavelId, colunaId: primeiraColuna.id, prioridade: t.prioridade,
+      prazo: `${anoMes}-${String(rec.diaBase).padStart(2,'0')}`, reuniaoId: '',
+      criadoPor: t.criadoPor, criadoEm: todayISO(), concluidoEm: null,
+      ordem: state.tarefas.filter(x=>x.colunaId===primeiraColuna.id).length,
+      checklist: (t.checklist||[]).map(c => ({ id: uid('ci'), texto: c.texto, feito: false })),
+      comentarios: [], recorrencia: { tipo: 'nenhuma' }, ultimaGeracaoEm: ''
+    };
+    state.tarefas.push(nova);
+    api.enviar('salvarTarefa', { dado: nova });
+    t.ultimaGeracaoEm = anoMes;
+    api.enviar('salvarTarefa', { dado: t });
+    registrarHistorico('tarefa', nova.id, 'criar', `Gerada automaticamente pela recorrência mensal de "${t.titulo}"`);
+    criouAlguma = true;
+  });
+  if (criouAlguma) {
+    persistir();
+    toast('Tarefas recorrentes do mês foram geradas automaticamente.');
+  }
+}
+
+/* ═══════════════════════ INICIALIZAÇÃO ═══════════════════════ */
+async function init(){
+  await garantirSenhasPadrao();
+  garantirDepartamentosPadrao();
+  await importarResponsaveisPadrao();
+  gerarTarefasRecorrentes();
+  arquivarAutomaticamente();
+  if (state.config.currentUserId && responsaveisSelecionaveis().some(u => u.id === state.config.currentUserId)) {
+    filtroUsuarioId = state.config.currentUserId; // visão "Meus itens" por padrão
+  }
+  render();
+  renderUserPill();
+  atualizarSyncBadge();
+  if (!state.config.currentUserId) {
+    setTimeout(() => {
+      if (precisaConfigurarMaster()) abrirModalConfigurarMaster();
+      else abrirModalIdentidade();
+    }, 300);
+  }
+  if (state.config.apiUrl) sincronizarInicial();
+}
+init();
+
+})();
+</script>
+</body>
+</html>
