@@ -2190,7 +2190,6 @@ document.getElementById('btnSalvarTarefa').addEventListener('click', () => {
 
   const existente = tarefaEmEdicaoId ? state.tarefas.find(t=>t.id===tarefaEmEdicaoId) : null;
   const antes = existente ? JSON.parse(JSON.stringify(existente)) : null;
-  const respAntes = existente ? existente.responsavelId : null;
 
   const tipoRec = document.getElementById('tRecorrenciaTipo').value;
   const diaRec = parseInt(document.getElementById('tRecorrenciaDia').value, 10);
@@ -2241,10 +2240,6 @@ document.getElementById('btnSalvarTarefa').addEventListener('click', () => {
   fecharModais();
   render();
 
-  const respMudou = dado.responsavelId && dado.responsavelId !== respAntes;
-  if (respMudou && state.config.autoNotify) {
-    notificarAtribuicao(dado);
-  }
   toast('Tarefa salva com sucesso.');
 
   if (colunaNovaFinal && !colunaAnteriorFinal) verificarArquivamentoAutomatico(dado);
@@ -2313,9 +2308,6 @@ function enviarEmail(t){
   }
 }
 
-function notificarAtribuicao(t){
-  toast('Notificar ' + (usuario(t.responsavelId)||{}).nome + ' sobre esta tarefa?', false, '✉️ E-mail', () => enviarEmail(t));
-}
 function notificarConclusao(t){
   const criador = usuario(t.criadoPor);
   if (criador && criador.email) {
