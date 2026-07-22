@@ -1251,6 +1251,7 @@ function mesclarPorId(locais, remotos){
 async function sincronizarInicial(){
   if (!api.remoto) { atualizarSyncBadge(); return; }
   atualizarSyncBadge('conectando');
+  const masterLocalAntes = state.usuarios.find(u => u.master);
   const dados = await api.carregarRemoto();
   if (dados && dados.tarefas) {
     const ENTIDADES = [
@@ -1268,6 +1269,17 @@ async function sincronizarInicial(){
       state[chave] = mesclado;
       for (const dado of somenteLocais) {
         await api.enviar(acao, { dado });
+      }
+    }
+    // O e-mail/senha do master só é editado localmente (tela de Configuração
+    // inicial / troca de senha) — se o backend ainda tinha a versão em branco
+    // do primeiro seed, o merge acima (que prioriza o remoto) sobrescreveria o
+    // valor certo. Restaura e reenvia pra manter o local como fonte da verdade.
+    if (masterLocalAntes && masterLocalAntes.email) {
+      const masterAtual = state.usuarios.find(u => u.master);
+      if (masterAtual && masterAtual.email !== masterLocalAntes.email) {
+        Object.assign(masterAtual, masterLocalAntes);
+        await api.enviar('salvarUsuario', { dado: masterAtual });
       }
     }
     persistir();
