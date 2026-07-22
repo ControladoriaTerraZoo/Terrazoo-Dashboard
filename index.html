@@ -1222,13 +1222,13 @@ const api = {
       return null;
     }
   },
-  async enviar(acao, dado){
+  async enviar(acao, corpo){
     if (!this.remoto) return { ok: true, local: true };
     try {
       const resp = await fetch(state.config.apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ acao, dado })
+        body: JSON.stringify({ acao, ...corpo })
       });
       return await resp.json();
     } catch(e){
