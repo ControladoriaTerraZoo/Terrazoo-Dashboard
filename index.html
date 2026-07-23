@@ -1051,7 +1051,7 @@ const DEFAULT_STATE = () => ({
     { id: 't3', titulo: 'Contratar novo analista', descricao: '', departamentoId: 'd2', responsavelId: RESPONSAVEL_DEMO.id, colunaId: 'c4', prioridade: 'baixa', prazo: '', reuniaoId: '', criadoPor: USUARIO_MASTER.id, criadoEm: todayISO(), concluidoEm: todayISO(), ordem: 0, checklist: [], comentarios: [], recorrencia: { tipo: 'nenhuma' }, ultimaGeracaoEm: '', arquivada: false, arquivadaEm: null }
   ],
   historico: [],
-  config: { apiUrl: '', autoNotify: true, currentUserId: '', exemploCarregado: true, arquivarAposDias: 3, responsaveisImportados: false }
+  config: { apiUrl: 'https://script.google.com/macros/s/AKfycbwDUGY7P3FEYpraw7BLZNjTrUCv1nmUOzRQrfnODyzRX_N7J19xZB_kXJp96fvWafQx/exec', autoNotify: true, currentUserId: '', exemploCarregado: true, arquivarAposDias: 3, responsaveisImportados: false }
 });
 
 function todayISO(){ return new Date().toISOString().slice(0,10); }
@@ -1207,13 +1207,20 @@ let state = carregarEstado();
 garantirUsuarioMaster();
 persistir();
 
+/* Precisa ser exatamente igual à CHAVE_ACESSO do Code.gs. Fica visível pra
+   quem ler o código-fonte público do site — não é segurança de verdade,
+   só evita que a URL do backend seja usável por quem a encontrar sem
+   também ter visto este arquivo (crawler, link vazado, etc.). */
+const CHAVE_ACESSO_BACKEND = '2af53b64b00079cff0319e337d5601a04b3e938352cbc558';
+
 /* ═══════════════════════ CAMADA API (local ou Apps Script) ═══════════════════════ */
 const api = {
   get remoto(){ return !!state.config.apiUrl; },
   async carregarRemoto(){
     if (!this.remoto) return null;
     try {
-      const resp = await fetch(state.config.apiUrl, { method: 'GET' });
+      const url = state.config.apiUrl + '?chave=' + encodeURIComponent(CHAVE_ACESSO_BACKEND);
+      const resp = await fetch(url, { method: 'GET' });
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const dados = await resp.json();
       return dados;
@@ -1228,7 +1235,7 @@ const api = {
       const resp = await fetch(state.config.apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ acao, ...corpo })
+        body: JSON.stringify({ acao, chave: CHAVE_ACESSO_BACKEND, ...corpo })
       });
       return await resp.json();
     } catch(e){
@@ -2979,13 +2986,16 @@ async function init(){
   render();
   renderUserPill();
   atualizarSyncBadge();
+  // Espera a sincronização inicial terminar antes de decidir qual tela mostrar:
+  // sem isso, um dispositivo novo pode ver "Configuração inicial" por engano
+  // (o master local ainda sem e-mail) antes dos dados reais chegarem do backend.
+  if (state.config.apiUrl) await sincronizarInicial();
   if (!state.config.currentUserId) {
     setTimeout(() => {
       if (precisaConfigurarMaster()) abrirModalConfigurarMaster();
       else abrirModalIdentidade();
     }, 300);
   }
-  if (state.config.apiUrl) sincronizarInicial();
 }
 init();
 
