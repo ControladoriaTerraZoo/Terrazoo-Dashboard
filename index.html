@@ -1254,39 +1254,24 @@ const api = {
   }
 };
 
-/* Mescla por id: remoto prevalece quando o registro já existe dos dois lados
-   (mudanças locais feitas com o backend configurado já foram enviadas na hora);
-   registros que só existem localmente (criados antes de configurar o backend,
-   por exemplo) são preservados e reenviados, em vez de descartados. */
-function mesclarPorId(locais, remotos){
-  const remotosPorId = new Map((remotos||[]).map(r => [r.id, r]));
-  const somenteLocais = (locais||[]).filter(l => !remotosPorId.has(l.id));
-  return { mesclado: [...(remotos||[]), ...somenteLocais], somenteLocais };
-}
-
 async function sincronizarInicial(){
   if (!api.remoto) { atualizarSyncBadge(); return; }
   atualizarSyncBadge('conectando');
   const masterLocalAntes = state.usuarios.find(u => u.master);
   const dados = await api.carregarRemoto();
   if (dados && dados.tarefas) {
-    const ENTIDADES = [
-      { chave: 'departamentos', acao: 'salvarDepartamento' },
-      { chave: 'usuarios', acao: 'salvarUsuario' },
-      { chave: 'colunas', acao: 'salvarColuna' },
-      { chave: 'reunioes', acao: 'salvarReuniao' },
-      { chave: 'tarefas', acao: 'salvarTarefa' },
-      { chave: 'historico', acao: 'registrarHistorico' }
-    ];
-    // Envia uma alteração de cada vez: disparar todas ao mesmo tempo sobrecarrega
-    // o backend (Apps Script) e causa gravações concorrentes que se perdem.
-    for (const { chave, acao } of ENTIDADES) {
-      const { mesclado, somenteLocais } = mesclarPorId(state[chave], dados[chave]);
-      state[chave] = mesclado;
-      for (const dado of somenteLocais) {
-        await api.enviar(acao, { dado });
-      }
-    }
+    // O backend é sempre a fonte da verdade aqui: toda criação/edição/exclusão já
+    // é enviada na hora (ver os vários api.enviar espalhados pelo código), então
+    // não há necessidade de "reenviar sobras locais" nessa sincronização
+    // periódica — fazer isso ressuscitava registros apagados por outra pessoa
+    // (ex: uma tarefa excluída em outro navegador voltava, porque este navegador
+    // ainda tinha ela em cache e achava que precisava "criar" de novo).
+    state.departamentos = dados.departamentos || [];
+    state.usuarios = dados.usuarios || [];
+    state.colunas = dados.colunas || [];
+    state.reunioes = dados.reunioes || [];
+    state.tarefas = dados.tarefas || [];
+    state.historico = dados.historico || [];
     // O e-mail/senha do master só é editado localmente (tela de Configuração
     // inicial / troca de senha) — se o backend ainda tinha a versão em branco
     // do primeiro seed, o merge acima (que prioriza o remoto) sobrescreveria o
