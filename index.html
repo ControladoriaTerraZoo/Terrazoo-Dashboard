@@ -137,6 +137,13 @@ input.header-search[type=text] {
   width: 8px; height: 8px; border-radius: 50%; background: var(--v3);
   box-shadow: 0 0 0 2px #fff;
 }
+.sidebar-nav-item.has-alert .sidebar-nav-icon::after {
+  content: '!'; position: absolute; top: -7px; right: -7px;
+  width: 15px; height: 15px; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; color: #4a3600; line-height: 1; padding-top: 1px;
+  background: #FFC107; box-shadow: 0 0 0 2px #fff;
+  clip-path: polygon(50% 6%, 96% 94%, 4% 94%);
+}
 .sidebar-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 
 /* sub itens em cascata (acordeão quando maximizada) */
@@ -436,12 +443,12 @@ textarea { resize: vertical; min-height: 60px; }
 .checklist-item button { background: none; border: none; color: var(--danger); font-size: 15px; cursor: pointer; }
 
 .reuniao-itens-header {
-  display: grid; grid-template-columns: 1fr 1.5fr 1fr 132px 22px; gap: 8px;
+  display: grid; grid-template-columns: 1fr 1.2fr 1.3fr 1fr 118px 22px; gap: 8px;
   font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
   color: var(--muted); padding: 0 2px 5px;
 }
 .reuniao-item-row {
-  display: grid; grid-template-columns: 1fr 1.5fr 1fr 132px 22px; gap: 8px;
+  display: grid; grid-template-columns: 1fr 1.2fr 1.3fr 1fr 118px 22px; gap: 8px;
   align-items: center; margin-bottom: 8px;
 }
 .reuniao-item-row input { width: 100%; }
@@ -479,6 +486,22 @@ textarea { resize: vertical; min-height: 60px; }
 .relatorio-tarefa-pendente { color: var(--muted); }
 
 .empty-hint { text-align: center; color: var(--muted); font-size: 12.5px; padding: 24px 8px; }
+
+/* ── ARQUIVO: pastas (mês > reunião/tarefas > responsável) ── */
+.arquivo-lista { display: flex; flex-direction: column; gap: 10px; max-width: 720px; }
+.arquivo-folder { border: 1px solid var(--borda); border-radius: 10px; background: #fff; overflow: hidden; }
+.arquivo-folder + .arquivo-folder { margin-top: 8px; }
+.arquivo-folder summary {
+  cursor: pointer; padding: 10px 14px; font-size: 13.5px; font-weight: 600; color: var(--v1);
+  list-style: none; display: flex; align-items: center; gap: 8px; user-select: none;
+}
+.arquivo-folder summary::-webkit-details-marker { display: none; }
+.arquivo-folder summary:hover { background: var(--v6); }
+.arquivo-folder .arquivo-folder-body { padding: 4px 14px 12px 28px; }
+.arquivo-mes { background: var(--v6); }
+.arquivo-mes > summary { font-size: 14.5px; }
+.arquivo-sub { border-color: var(--borda); }
+.arquivo-sub .list-row { margin-bottom: 6px; }
 
 .historico-list, .comentarios-list {
   max-height: 170px; overflow-y: auto; border: 1px solid var(--borda);
@@ -562,8 +585,8 @@ textarea { resize: vertical; min-height: 60px; }
           <span class="sidebar-nav-label">Nova Tarefa</span>
         </div>
       </div>
-      <div class="sidebar-nav-item" id="navSemReuniao">
-        <div class="sidebar-nav-row" id="btnFiltroSemReuniao" title="Tarefas sem reunião vinculada">
+      <div class="sidebar-nav-item" id="navMinhasTarefas">
+        <div class="sidebar-nav-row" id="btnMinhasTarefas" title="Minhas tarefas (com ou sem reunião vinculada)">
           <span class="sidebar-nav-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <line x1="9" y1="6" x2="20" y2="6"/>
@@ -574,7 +597,19 @@ textarea { resize: vertical; min-height: 60px; }
               <circle cx="4.5" cy="18" r="1.2" fill="currentColor" stroke="none"/>
             </svg>
           </span>
-          <span class="sidebar-nav-label">Tarefas</span>
+          <span class="sidebar-nav-label">Minhas Tarefas</span>
+        </div>
+      </div>
+      <div class="sidebar-nav-item" id="navTarefasDestinadas">
+        <div class="sidebar-nav-row" id="btnTarefasDestinadas" title="Tarefas que você destinou a outras pessoas">
+          <span class="sidebar-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 12h13"/>
+              <polyline points="12 6 18 12 12 18"/>
+              <circle cx="4" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+            </svg>
+          </span>
+          <span class="sidebar-nav-label">Tarefas Destinadas</span>
         </div>
       </div>
       <div class="sidebar-nav-item" id="navReunioes">
@@ -844,6 +879,8 @@ textarea { resize: vertical; min-height: 60px; }
     </div>
     <div class="modal-footer">
       <button class="btn btn-danger" id="btnExcluirTarefa" style="display:none;margin-right:auto">Excluir tarefa</button>
+      <select id="tMoverParaSelect" style="display:none;max-width:170px"></select>
+      <button class="btn" id="btnMoverPara" style="display:none">Mover para</button>
       <button class="btn" data-close>Cancelar</button>
       <button class="btn btn-primary" id="btnSalvarTarefa">Salvar</button>
     </div>
@@ -943,7 +980,7 @@ textarea { resize: vertical; min-height: 60px; }
       <div class="form-group" id="reuniaoItensSection">
         <label>Itens de ação</label>
         <div class="reuniao-itens-header">
-          <span>Departamento</span><span>Nome da tarefa</span><span>Responsável</span><span>Prazo</span><span></span>
+          <span>Departamento</span><span>Nome da tarefa</span><span>Descrição</span><span>Responsável</span><span>Prazo</span><span></span>
         </div>
         <div id="reuniaoItensBox"></div>
         <button type="button" class="btn btn-sm" id="btnAddReuniaoItem">+ Adicionar item</button>
@@ -1377,10 +1414,41 @@ function registrarDiffTarefa(antes, depois){
 let filtroDeptoId = '';
 let filtroUsuarioId = '';
 let filtroPrioridade = '';
-let filtroSemReuniao = false;
 let filtroRelatorioReuniaoId = '';
-let modoArquivo = false;
+/* Único controle de "painel" ativo (visão exclusiva) — evita que seleções
+   acumulem (ex.: abrir um relatório e depois clicar em "Minhas Tarefas" tem
+   que trocar de painel, não empilhar filtros). Filtros de departamento,
+   responsável, prioridade e busca continuam ortogonais e se aplicam dentro
+   do painel ativo, qualquer que ele seja. */
+let viewMode = 'quadro'; // 'quadro' | 'destinadas' | 'arquivo' | 'relatorio'
 const RELATORIO_GERAL = '__geral__';
+
+/* Tarefas que EU criei e destinei a outra pessoa (exclui as que destinei a mim mesmo). */
+function tarefasDestinadas(){
+  const busca = document.getElementById('filterBusca').value.trim().toLowerCase();
+  return state.tarefas.filter(t => {
+    if (t.arquivada) return false;
+    if (t.criadoPor !== state.config.currentUserId) return false;
+    if (!t.responsavelId || t.responsavelId === state.config.currentUserId) return false;
+    if (filtroDeptoId && t.departamentoId !== filtroDeptoId) return false;
+    if (filtroPrioridade && t.prioridade !== filtroPrioridade) return false;
+    if (busca && !(t.titulo||'').toLowerCase().includes(busca)) return false;
+    return true;
+  });
+}
+/* Marca como vistos (apaga o alerta do triângulo amarelo) os itens
+   atualmente visíveis em "Tarefas Destinadas". */
+function limparAlertasDestinadas(){
+  let mudou = false;
+  tarefasDestinadas().forEach(t => {
+    if (t.alertaDestinatario) {
+      t.alertaDestinatario = false;
+      api.enviar('salvarTarefa', { dado: t });
+      mudou = true;
+    }
+  });
+  if (mudou) persistir();
+}
 
 function renderSidebar(){
   // Gerenciar departamentos e responsáveis (criar/editar/excluir) é restrito a
@@ -1410,7 +1478,7 @@ function renderSidebar(){
   `).join('');
 
   boxRelatorios.innerHTML = `<div class="sidebar-item ${filtroRelatorioReuniaoId===RELATORIO_GERAL?'active':''}" data-relatorioreuniao="${RELATORIO_GERAL}">Todas as Tarefas</div>` +
-    state.reunioes.map(r => `
+    state.reunioes.filter(r => !r.arquivada).map(r => `
     <div class="sidebar-item sidebar-item-child ${filtroRelatorioReuniaoId===r.id?'active':''}" data-relatorioreuniao="${r.id}">${escapeHtml(r.titulo)}</div>
   `).join('');
 
@@ -1427,17 +1495,23 @@ function renderSidebar(){
   }));
   boxRelatorios.querySelectorAll('[data-relatorioreuniao]').forEach(el => el.addEventListener('click', () => {
     filtroRelatorioReuniaoId = (filtroRelatorioReuniaoId === el.dataset.relatorioreuniao) ? '' : el.dataset.relatorioreuniao;
-    if (filtroRelatorioReuniaoId) modoArquivo = false;
+    viewMode = filtroRelatorioReuniaoId ? 'relatorio' : 'quadro';
     render();
   }));
 
+  const temAlertaDestinadas = state.tarefas.some(t =>
+    !t.arquivada && t.criadoPor === state.config.currentUserId &&
+    t.responsavelId && t.responsavelId !== state.config.currentUserId && t.alertaDestinatario
+  );
+
   document.getElementById('navDeptos').classList.toggle('has-filter', !!filtroDeptoId);
   document.getElementById('navUsuarios').classList.toggle('has-filter', !!filtroUsuarioId);
-  document.getElementById('navRelatorios').classList.toggle('has-filter', !!filtroRelatorioReuniaoId);
-  document.getElementById('navSemReuniao').classList.toggle('has-filter', filtroSemReuniao);
-  document.getElementById('navArquivo').classList.toggle('has-filter', modoArquivo);
-  document.getElementById('btnFiltroSemReuniao').classList.toggle('view-active', filtroSemReuniao);
-  document.getElementById('btnFiltroArquivo').classList.toggle('view-active', modoArquivo);
+  document.getElementById('navRelatorios').classList.toggle('has-filter', viewMode === 'relatorio');
+  document.getElementById('navArquivo').classList.toggle('has-filter', viewMode === 'arquivo');
+  document.getElementById('navTarefasDestinadas').classList.toggle('has-alert', temAlertaDestinadas);
+  document.getElementById('btnMinhasTarefas').classList.toggle('view-active', viewMode === 'quadro' && !!filtroUsuarioId && filtroUsuarioId === state.config.currentUserId);
+  document.getElementById('btnTarefasDestinadas').classList.toggle('view-active', viewMode === 'destinadas');
+  document.getElementById('btnFiltroArquivo').classList.toggle('view-active', viewMode === 'arquivo');
 }
 
 function escapeHtml(s){
@@ -1445,11 +1519,12 @@ function escapeHtml(s){
 }
 
 /* ═══════════════════════ RENDER: QUADRO ═══════════════════════ */
+/* Mostra TODAS as tarefas do responsável/departamento filtrado, com ou sem
+   vínculo com reunião — não existe mais um filtro separado "sem reunião". */
 function tarefasFiltradas(){
   const busca = document.getElementById('filterBusca').value.trim().toLowerCase();
   return state.tarefas.filter(t => {
     if (t.arquivada) return false;
-    if (filtroSemReuniao && t.reuniaoId) return false;
     if (filtroDeptoId && t.departamentoId !== filtroDeptoId) return false;
     if (filtroUsuarioId && t.responsavelId !== filtroUsuarioId) return false;
     if (filtroPrioridade && t.prioridade !== filtroPrioridade) return false;
@@ -1477,25 +1552,33 @@ function isOverdue(t){
 
 function render(){
   renderSidebar();
-  const board = document.getElementById('board');
-  board.style.justifyContent = '';
   const filtroPrioridadeEl = document.getElementById('priorityFilter');
 
-  if (modoArquivo) {
+  if (viewMode === 'arquivo') {
     filtroPrioridadeEl.style.display = '';
     renderArquivo();
     return;
   }
-  if (filtroRelatorioReuniaoId) {
+  if (viewMode === 'relatorio') {
     filtroPrioridadeEl.style.display = 'none';
     renderRelatorio(filtroRelatorioReuniaoId);
     return;
   }
   filtroPrioridadeEl.style.display = '';
-  document.getElementById('boardTitleRow').textContent = 'Quadro de Tarefas';
+  if (viewMode === 'destinadas') {
+    renderQuadro(tarefasDestinadas(), 'Tarefas Destinadas');
+    return;
+  }
+  const titulo = (filtroUsuarioId && filtroUsuarioId === state.config.currentUserId) ? 'Minhas Tarefas' : 'Quadro de Tarefas';
+  renderQuadro(tarefasFiltradas(), titulo);
+}
+
+function renderQuadro(tarefas, titulo){
+  const board = document.getElementById('board');
+  board.style.justifyContent = '';
+  document.getElementById('boardTitleRow').textContent = titulo;
 
   board.innerHTML = '';
-  const tarefas = tarefasFiltradas();
   const cols = [...state.colunas].sort((a,b)=>a.ordem-b.ordem);
   const usarOrdemPrazo = !!filtroUsuarioId && filtroUsuarioId === state.config.currentUserId;
 
@@ -1715,6 +1798,53 @@ function arquivarAutomaticamente(){
   reunioesAfetadas.forEach(id => sincronizarArquivamentoReuniao(id));
 }
 
+const NOMES_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function nomeMesAno(anoMes){
+  const [y, m] = anoMes.split('-');
+  const idx = parseInt(m, 10) - 1;
+  if (!y || idx < 0 || idx > 11 || isNaN(idx)) return 'Sem data de arquivamento';
+  return NOMES_MESES[idx] + ' de ' + y;
+}
+/* <details> aninhado — funciona como pasta que expande/recolhe sem precisar de JS extra. */
+function htmlPasta(titulo, corpoHtml, classeExtra){
+  return `<details class="arquivo-folder ${classeExtra||''}" open>
+    <summary>${titulo}</summary>
+    <div class="arquivo-folder-body">${corpoHtml}</div>
+  </details>`;
+}
+function htmlTarefasArquivadasPorResponsavel(lista){
+  const porResp = new Map();
+  lista.forEach(t => {
+    const key = t.responsavelId || '';
+    if (!porResp.has(key)) porResp.set(key, []);
+    porResp.get(key).push(t);
+  });
+  return [...porResp.entries()].map(([respId, tarefas]) => {
+    const u = respId ? usuario(respId) : null;
+    const nome = u ? u.nome : 'Sem responsável definido';
+    const itens = tarefas.map(t => {
+      const dp = depto(t.departamentoId);
+      const detalhes = [
+        dp ? escapeHtml(dp.nome) : null,
+        'concluída em ' + (t.concluidoEm ? formatarData(t.concluidoEm) : '—'),
+        'arquivada em ' + (t.arquivadaEm ? formatarDataHora(t.arquivadaEm) : '—')
+      ].filter(Boolean).join(' · ');
+      return `
+      <div class="list-row">
+        <div class="list-row-info">
+          <div class="list-row-name">${escapeHtml(t.titulo)}</div>
+          <div class="list-row-sub">${detalhes}</div>
+        </div>
+        <button class="btn btn-sm" data-restaurar="${t.id}">↩️ Restaurar</button>
+      </div>`;
+    }).join('');
+    return htmlPasta(`👤 ${escapeHtml(nome)} <span class="badge">${tarefas.length}</span>`, itens, 'arquivo-sub');
+  }).join('');
+}
+
+/* Organiza o arquivo em pastas: mês do arquivamento → reunião (ou "Tarefas"
+   avulsas, sem reunião) → responsável — agrupando tudo em vez de listar
+   cada tarefa individualmente, mesmo quando o responsável se repete. */
 function renderArquivo(){
   const board = document.getElementById('board');
   document.getElementById('boardTitleRow').textContent = 'Arquivo';
@@ -1722,39 +1852,54 @@ function renderArquivo(){
 
   const arquivadas = state.tarefas.filter(t => {
     if (!t.arquivada) return false;
-    if (filtroSemReuniao && t.reuniaoId) return false;
     if (filtroDeptoId && t.departamentoId !== filtroDeptoId) return false;
     if (filtroUsuarioId && t.responsavelId !== filtroUsuarioId) return false;
     if (filtroPrioridade && t.prioridade !== filtroPrioridade) return false;
     if (busca && !(t.titulo||'').toLowerCase().includes(busca)) return false;
     return true;
-  }).sort((a,b) => (b.arquivadaEm||'').localeCompare(a.arquivadaEm||''));
+  });
 
   if (!arquivadas.length) {
     board.innerHTML = '<div class="empty-hint">Nenhuma tarefa arquivada com os filtros atuais.</div>';
     return;
   }
 
-  board.innerHTML = `<div class="relatorio-lista">` + arquivadas.map(t => {
-    const dp = depto(t.departamentoId);
-    const resp = usuario(t.responsavelId);
-    const detalhes = [
-      dp ? escapeHtml(dp.nome) : null,
-      resp ? escapeHtml(resp.nome) : null,
-      'concluída em ' + (t.concluidoEm ? formatarData(t.concluidoEm) : '—'),
-      'arquivada em ' + (t.arquivadaEm ? formatarDataHora(t.arquivadaEm) : '—')
-    ].filter(Boolean).join(' · ');
-    return `
-    <div class="list-row">
-      <div class="list-row-info">
-        <div class="list-row-name">${escapeHtml(t.titulo)}</div>
-        <div class="list-row-sub">${detalhes}</div>
-      </div>
-      <button class="btn btn-sm" data-restaurar="${t.id}">↩️ Restaurar</button>
-    </div>`;
-  }).join('') + `</div>`;
+  const porMes = new Map();
+  arquivadas.forEach(t => {
+    const chave = (t.arquivadaEm || '').slice(0, 7) || '0000-00';
+    if (!porMes.has(chave)) porMes.set(chave, []);
+    porMes.get(chave).push(t);
+  });
+  const mesesOrdenados = [...porMes.keys()].sort((a, b) => b.localeCompare(a));
 
-  board.querySelectorAll('[data-restaurar]').forEach(b => b.addEventListener('click', () => restaurarTarefa(b.dataset.restaurar)));
+  const htmlMeses = mesesOrdenados.map(mes => {
+    const tarefasMes = porMes.get(mes);
+    const comReuniao = tarefasMes.filter(t => t.reuniaoId);
+    const semReuniao = tarefasMes.filter(t => !t.reuniaoId);
+
+    const porReuniao = new Map();
+    comReuniao.forEach(t => {
+      if (!porReuniao.has(t.reuniaoId)) porReuniao.set(t.reuniaoId, []);
+      porReuniao.get(t.reuniaoId).push(t);
+    });
+
+    const htmlReunioes = [...porReuniao.entries()].map(([reuniaoId, lista]) => {
+      const r = reuniao(reuniaoId);
+      return htmlPasta(`🗓️ ${escapeHtml(r ? r.titulo : 'Reunião removida')} <span class="badge">${lista.length}</span>`, htmlTarefasArquivadasPorResponsavel(lista), 'arquivo-sub');
+    }).join('');
+    const htmlAvulsas = semReuniao.length
+      ? htmlPasta(`📋 Tarefas <span class="badge">${semReuniao.length}</span>`, htmlTarefasArquivadasPorResponsavel(semReuniao), 'arquivo-sub')
+      : '';
+
+    return htmlPasta(`📅 ${nomeMesAno(mes)} <span class="badge">${tarefasMes.length}</span>`, htmlReunioes + htmlAvulsas, 'arquivo-mes');
+  }).join('');
+
+  board.innerHTML = `<div class="arquivo-lista">${htmlMeses}</div>`;
+
+  board.querySelectorAll('[data-restaurar]').forEach(b => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    restaurarTarefa(b.dataset.restaurar);
+  }));
 }
 
 const SVG_EMAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5l8.5 6 8.5-6"/></svg>';
@@ -1806,6 +1951,57 @@ function formatarData(iso){
   return `${d}/${m}`;
 }
 
+/* ═══════════════════════ MOVER TAREFA ENTRE COLUNAS (drag-and-drop e botão "Mover para") ═══════════════════════ */
+function primeiraColuna(){ return [...state.colunas].sort((a,b)=>a.ordem-b.ordem)[0]; }
+
+/* Acende o alerta (triângulo amarelo) no menu "Tarefas Destinadas" de quem
+   delegou a tarefa quando ela sai da primeira coluna ("A Fazer") para
+   qualquer outra — sinal de que o destinatário começou a mexer nela. */
+function marcarAlertaSeDelegada(t, colunaAnteriorId, novaColId){
+  const primeira = primeiraColuna();
+  if (primeira && colunaAnteriorId === primeira.id && novaColId !== primeira.id &&
+      t.responsavelId && t.criadoPor && t.responsavelId !== t.criadoPor) {
+    t.alertaDestinatario = true;
+  }
+}
+
+/* Efeitos colaterais de mover uma tarefa de coluna (histórico, conclusão,
+   notificação, arquivamento automático, alerta de delegação) — usado tanto
+   pelo drag-and-drop quanto pelo botão "Mover para". Não mexe em
+   colunaId/ordem nem faz persistir()/render(): isso fica a cargo de quem
+   chama, já que o drag-and-drop também precisa reordenar os outros cards.  */
+function efetivarMovimentacaoTarefa(t, colunaAnteriorId, novaColId){
+  if (colunaAnteriorId === novaColId) return;
+  const colDestino = coluna(novaColId);
+  const colOrigem = coluna(colunaAnteriorId);
+  registrarHistorico('tarefa', t.id, 'mover', `Moveu de "${colOrigem?colOrigem.nome:'?'}" para "${colDestino?colDestino.nome:'?'}"`);
+  marcarAlertaSeDelegada(t, colunaAnteriorId, novaColId);
+  let precisaSalvarTarefa = !!t.alertaDestinatario;
+  if (colDestino && colDestino.final) {
+    t.concluidoEm = todayISO();
+    if (state.config.autoNotify) notificarConclusao(t);
+    if (!(colOrigem && colOrigem.final)) verificarArquivamentoAutomatico(t);
+    precisaSalvarTarefa = true;
+  } else if (t.concluidoEm) {
+    t.concluidoEm = null;
+    precisaSalvarTarefa = true;
+  }
+  if (precisaSalvarTarefa) api.enviar('salvarTarefa', { dado: t });
+}
+
+/* Move a tarefa para o fim da coluna destino — usado pelo botão "Mover
+   para" dentro do modal da tarefa (alternativa ao arrastar o card). */
+function moverTarefaParaColunaBotao(t, novaColId){
+  const colunaAnterior = t.colunaId;
+  if (colunaAnterior === novaColId) return;
+  t.colunaId = novaColId;
+  t.ordem = state.tarefas.filter(x=>x.colunaId===novaColId && x.id!==t.id).length;
+  api.enviar('moverTarefa', { id: t.id, colunaId: t.colunaId, ordem: t.ordem });
+  efetivarMovimentacaoTarefa(t, colunaAnterior, novaColId);
+  persistir();
+  render();
+}
+
 /* ═══════════════════════ DRAG & DROP: CARDS ═══════════════════════ */
 let draggedTaskId = null;
 let draggedColId = null;
@@ -1855,24 +2051,9 @@ function ligarEventosBoard(){
         tt.colunaId = novaColId;
         tt.ordem = idx;
       });
-      persistir();
       api.enviar('moverTarefa', { id: t.id, colunaId: t.colunaId, ordem: t.ordem });
-      if (colunaAnterior !== novaColId) {
-        const colDestino = coluna(novaColId);
-        const colOrigem = coluna(colunaAnterior);
-        registrarHistorico('tarefa', t.id, 'mover', `Moveu de "${colOrigem?colOrigem.nome:'?'}" para "${colDestino?colDestino.nome:'?'}"`);
-        if (colDestino && colDestino.final) {
-          t.concluidoEm = todayISO();
-          persistir();
-          api.enviar('salvarTarefa', { dado: t });
-          if (state.config.autoNotify) notificarConclusao(t);
-          if (!(colOrigem && colOrigem.final)) verificarArquivamentoAutomatico(t);
-        } else if (t.concluidoEm) {
-          t.concluidoEm = null;
-          persistir();
-          api.enviar('salvarTarefa', { dado: t });
-        }
-      }
+      efetivarMovimentacaoTarefa(t, colunaAnterior, novaColId);
+      persistir();
       render();
     });
   });
@@ -1984,6 +2165,8 @@ function abrirModalTarefa(taskId, colunaPadrao){
   const notifyBox = document.getElementById('tNotifyBox');
   const comentariosBox = document.getElementById('tComentariosBox');
   const historicoBox = document.getElementById('tHistoricoBox');
+  const selectMoverPara = document.getElementById('tMoverParaSelect');
+  const btnMoverPara = document.getElementById('btnMoverPara');
 
   if (taskId) {
     const t = state.tarefas.find(x=>x.id===taskId);
@@ -2000,12 +2183,20 @@ function abrirModalTarefa(taskId, colunaPadrao){
     document.getElementById('tRecorrenciaDia').value = (t.recorrencia && t.recorrencia.diaBase) || '';
     document.getElementById('tRecorrenciaDiaBox').style.display = document.getElementById('tRecorrenciaTipo').value === 'mensal' ? '' : 'none';
     checklistTemp = JSON.parse(JSON.stringify(t.checklist || []));
-    btnExcluir.style.display = '';
+    // Membro só pode excluir tarefas que ele mesmo criou — não as que apenas
+    // foram destinadas a ele por outra pessoa. Admin/master sempre pode.
+    const podeExcluir = souAdmin() || t.criadoPor === state.config.currentUserId;
+    btnExcluir.style.display = podeExcluir ? '' : 'none';
     notifyBox.style.display = '';
     comentariosBox.style.display = '';
     historicoBox.style.display = '';
     renderComentariosTarefa(taskId);
     renderHistoricoTarefa(taskId);
+    const outrasColunas = [...state.colunas].sort((a,b)=>a.ordem-b.ordem).filter(c=>c.id!==t.colunaId);
+    selectMoverPara.innerHTML = outrasColunas.map(c=>`<option value="${c.id}">${escapeHtml(c.nome)}</option>`).join('');
+    const mostrarMoverPara = outrasColunas.length > 0;
+    selectMoverPara.style.display = mostrarMoverPara ? '' : 'none';
+    btnMoverPara.style.display = mostrarMoverPara ? '' : 'none';
   } else {
     document.getElementById('tarefaModalTitulo').textContent = 'Nova Tarefa';
     document.getElementById('tTitulo').value = '';
@@ -2024,10 +2215,22 @@ function abrirModalTarefa(taskId, colunaPadrao){
     notifyBox.style.display = 'none';
     comentariosBox.style.display = 'none';
     historicoBox.style.display = 'none';
+    selectMoverPara.style.display = 'none';
+    btnMoverPara.style.display = 'none';
   }
   renderChecklistTemp();
   abrirModal(modal);
 }
+
+document.getElementById('btnMoverPara').addEventListener('click', () => {
+  const t = state.tarefas.find(x=>x.id===tarefaEmEdicaoId);
+  const novaColId = document.getElementById('tMoverParaSelect').value;
+  if (!t || !novaColId) return;
+  const nomeColuna = coluna(novaColId) ? coluna(novaColId).nome : '';
+  moverTarefaParaColunaBotao(t, novaColId);
+  fecharModais();
+  toast(`Tarefa movida para "${nomeColuna}".`);
+});
 
 document.getElementById('tRecorrenciaTipo').addEventListener('change', () => {
   document.getElementById('tRecorrenciaDiaBox').style.display =
@@ -2112,7 +2315,7 @@ document.getElementById('btnAddChecklistItem').addEventListener('click', () => {
 /* ═══════════════════════ ITENS DA NOVA REUNIÃO (com autocompletar) ═══════════════════════ */
 let reuniaoItensTemp = [];
 function novoItemReuniao(){
-  return { id: uid('ri'), departamentoId: '', departamentoTexto: '', responsavelId: '', responsavelTexto: '', titulo: '', prazo: '' };
+  return { id: uid('ri'), departamentoId: '', departamentoTexto: '', responsavelId: '', responsavelTexto: '', titulo: '', descricao: '', prazo: '' };
 }
 
 function normalizarTexto(s){
@@ -2148,6 +2351,7 @@ function renderReuniaoItens(){
     row.innerHTML = `
       <input type="text" placeholder="Departamento" autocomplete="off" data-row="${item.id}" data-field="depto" value="${escapeHtml(item.departamentoTexto)}"/>
       <input type="text" placeholder="Nome da tarefa" data-row="${item.id}" data-field="titulo" value="${escapeHtml(item.titulo)}"/>
+      <input type="text" placeholder="Descrição (opcional)" data-row="${item.id}" data-field="descricao" value="${escapeHtml(item.descricao)}"/>
       <input type="text" placeholder="Responsável" autocomplete="off" data-row="${item.id}" data-field="responsavel" value="${escapeHtml(item.responsavelTexto)}"/>
       <input type="date" data-row="${item.id}" data-field="prazo" value="${item.prazo}"/>
       <button type="button" data-del="${item.id}" title="Remover item">✕</button>
@@ -2157,6 +2361,9 @@ function renderReuniaoItens(){
 
   box.querySelectorAll('[data-field="titulo"]').forEach(inp => inp.addEventListener('input', () => {
     reuniaoItensTemp.find(i=>i.id===inp.dataset.row).titulo = inp.value;
+  }));
+  box.querySelectorAll('[data-field="descricao"]').forEach(inp => inp.addEventListener('input', () => {
+    reuniaoItensTemp.find(i=>i.id===inp.dataset.row).descricao = inp.value;
   }));
   box.querySelectorAll('[data-field="prazo"]').forEach(inp => inp.addEventListener('input', () => {
     reuniaoItensTemp.find(i=>i.id===inp.dataset.row).prazo = inp.value;
@@ -2251,6 +2458,10 @@ document.getElementById('btnSalvarTarefa').addEventListener('click', () => {
 
 document.getElementById('btnExcluirTarefa').addEventListener('click', () => {
   const t = state.tarefas.find(x=>x.id===tarefaEmEdicaoId);
+  if (t && !souAdmin() && t.criadoPor !== state.config.currentUserId) {
+    toast('Você só pode excluir tarefas que você mesmo criou.', true);
+    return;
+  }
   abrirConfirm('Excluir tarefa', 'Tem certeza que deseja excluir esta tarefa? Essa ação não pode ser desfeita.', () => {
     const titulo = t ? t.titulo : '';
     state.tarefas = state.tarefas.filter(x=>x.id!==tarefaEmEdicaoId);
@@ -2633,7 +2844,7 @@ document.getElementById('btnCriarReuniao').addEventListener('click', () => {
   }
 
   const itensPreenchidos = reuniaoItensTemp.filter(i =>
-    i.titulo.trim() || i.departamentoTexto.trim() || i.responsavelTexto.trim() || i.prazo
+    i.titulo.trim() || i.descricao.trim() || i.departamentoTexto.trim() || i.responsavelTexto.trim() || i.prazo
   );
   for (const item of itensPreenchidos) {
     if (!item.titulo.trim()) { toast('Informe o nome da tarefa em todos os itens preenchidos.', true); return; }
@@ -2649,7 +2860,7 @@ document.getElementById('btnCriarReuniao').addEventListener('click', () => {
   const primeiraColuna = [...state.colunas].sort((a,b)=>a.ordem-b.ordem)[0];
   itensPreenchidos.forEach((item, idx) => {
     const t = {
-      id: uid('t'), titulo: item.titulo.trim(), descricao: '',
+      id: uid('t'), titulo: item.titulo.trim(), descricao: item.descricao.trim(),
       departamentoId: item.departamentoId, responsavelId: item.responsavelId,
       colunaId: primeiraColuna.id, prioridade: 'media', prazo: item.prazo, reuniaoId: r.id,
       criadoPor: state.config.currentUserId, criadoEm: todayISO(), concluidoEm: null,
@@ -2772,6 +2983,7 @@ document.getElementById('btnSidebarUserSair').addEventListener('click', e => {
   document.getElementById('sidebarUserMenu').classList.remove('open');
   state.config.currentUserId = '';
   filtroUsuarioId = '';
+  viewMode = 'quadro';
   persistir();
   renderUserPill();
   render();
@@ -2787,6 +2999,7 @@ function finalizarLogin(id){
   state.config.currentUserId = id;
   // "Meus itens" por padrão só faz sentido para quem é responsável por tarefas (não para o usuário master)
   filtroUsuarioId = responsaveisSelecionaveis().some(u => u.id === id) ? id : '';
+  viewMode = 'quadro';
   usuarioAutenticandoId = null;
   persistir();
   fecharModais();
@@ -2879,13 +3092,18 @@ document.getElementById('sidebarActionNovoDepto').addEventListener('click', abri
 document.getElementById('sidebarActionNovoUsuario').addEventListener('click', () => abrirModalUsuarios('responsavel'));
 document.getElementById('sidebarActionNovaReuniao').addEventListener('click', abrirModalReuniao);
 document.getElementById('btnNovaTarefa').addEventListener('click', () => abrirModalTarefa(null));
-document.getElementById('btnFiltroSemReuniao').addEventListener('click', () => {
-  filtroSemReuniao = !filtroSemReuniao;
+document.getElementById('btnMinhasTarefas').addEventListener('click', () => {
+  viewMode = 'quadro';
+  filtroUsuarioId = state.config.currentUserId || '';
+  render();
+});
+document.getElementById('btnTarefasDestinadas').addEventListener('click', () => {
+  viewMode = 'destinadas';
+  limparAlertasDestinadas();
   render();
 });
 document.getElementById('btnFiltroArquivo').addEventListener('click', () => {
-  modoArquivo = !modoArquivo;
-  if (modoArquivo) filtroRelatorioReuniaoId = '';
+  viewMode = viewMode === 'arquivo' ? 'quadro' : 'arquivo';
   render();
 });
 
