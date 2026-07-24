@@ -1374,7 +1374,6 @@ function registrarDiffTarefa(antes, depois){
 }
 
 /* ═══════════════════════ RENDER: FILTROS (BARRA LATERAL) ═══════════════════════ */
-let filtroReuniaoId = '';
 let filtroDeptoId = '';
 let filtroUsuarioId = '';
 let filtroPrioridade = '';
@@ -1397,7 +1396,7 @@ function renderSidebar(){
   const boxRelatorios = document.getElementById('sidebarRelatorios');
 
   boxReunioes.innerHTML = state.reunioes.filter(r => !r.arquivada).map(r => `
-    <div class="sidebar-item ${filtroReuniaoId===r.id?'active':''}" data-reuniao="${r.id}">${escapeHtml(r.titulo)}</div>
+    <div class="sidebar-item" data-reuniao="${r.id}">${escapeHtml(r.titulo)}</div>
   `).join('');
 
   boxDeptos.innerHTML = state.departamentos.map(d => `
@@ -1416,9 +1415,9 @@ function renderSidebar(){
   `).join('');
 
   boxReunioes.querySelectorAll('[data-reuniao]').forEach(el => el.addEventListener('click', () => {
-    filtroReuniaoId = (filtroReuniaoId === el.dataset.reuniao) ? '' : el.dataset.reuniao;
-    if (filtroReuniaoId) filtroSemReuniao = false;
-    render();
+    renderReuniaoList();
+    abrirEdicaoReuniao(el.dataset.reuniao);
+    abrirModal(document.getElementById('modalReuniao'));
   }));
   boxDeptos.querySelectorAll('[data-depto]').forEach(el => el.addEventListener('click', () => {
     filtroDeptoId = (filtroDeptoId === el.dataset.depto) ? '' : el.dataset.depto; render();
@@ -1432,7 +1431,6 @@ function renderSidebar(){
     render();
   }));
 
-  document.getElementById('navReunioes').classList.toggle('has-filter', !!filtroReuniaoId);
   document.getElementById('navDeptos').classList.toggle('has-filter', !!filtroDeptoId);
   document.getElementById('navUsuarios').classList.toggle('has-filter', !!filtroUsuarioId);
   document.getElementById('navRelatorios').classList.toggle('has-filter', !!filtroRelatorioReuniaoId);
@@ -1451,7 +1449,6 @@ function tarefasFiltradas(){
   const busca = document.getElementById('filterBusca').value.trim().toLowerCase();
   return state.tarefas.filter(t => {
     if (t.arquivada) return false;
-    if (filtroReuniaoId && t.reuniaoId !== filtroReuniaoId) return false;
     if (filtroSemReuniao && t.reuniaoId) return false;
     if (filtroDeptoId && t.departamentoId !== filtroDeptoId) return false;
     if (filtroUsuarioId && t.responsavelId !== filtroUsuarioId) return false;
@@ -1725,7 +1722,6 @@ function renderArquivo(){
 
   const arquivadas = state.tarefas.filter(t => {
     if (!t.arquivada) return false;
-    if (filtroReuniaoId && t.reuniaoId !== filtroReuniaoId) return false;
     if (filtroSemReuniao && t.reuniaoId) return false;
     if (filtroDeptoId && t.departamentoId !== filtroDeptoId) return false;
     if (filtroUsuarioId && t.responsavelId !== filtroUsuarioId) return false;
@@ -2885,7 +2881,6 @@ document.getElementById('sidebarActionNovaReuniao').addEventListener('click', ab
 document.getElementById('btnNovaTarefa').addEventListener('click', () => abrirModalTarefa(null));
 document.getElementById('btnFiltroSemReuniao').addEventListener('click', () => {
   filtroSemReuniao = !filtroSemReuniao;
-  if (filtroSemReuniao) filtroReuniaoId = '';
   render();
 });
 document.getElementById('btnFiltroArquivo').addEventListener('click', () => {
