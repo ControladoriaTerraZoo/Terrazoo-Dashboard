@@ -1384,6 +1384,13 @@ let modoArquivo = false;
 const RELATORIO_GERAL = '__geral__';
 
 function renderSidebar(){
+  // Gerenciar departamentos e responsáveis (criar/editar/excluir) é restrito a
+  // admin/master — membros nem veem essas seções na barra lateral. Eles
+  // continuam escolhendo departamento e responsável normalmente dentro do
+  // formulário de tarefa (esses selects não dependem dessa seção).
+  document.getElementById('navDeptos').style.display = souAdmin() ? '' : 'none';
+  document.getElementById('navUsuarios').style.display = souAdmin() ? '' : 'none';
+
   const boxReunioes = document.getElementById('sidebarReunioes');
   const boxDeptos = document.getElementById('sidebarDeptos');
   const boxUsuarios = document.getElementById('sidebarUsuarios');
