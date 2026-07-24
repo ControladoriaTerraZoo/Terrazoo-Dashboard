@@ -282,7 +282,11 @@ input.header-search[type=text] {
 .btn-icon { padding: 6px 9px; }
 
 /* ── BOARD ── */
-.board-wrap { flex: 1; overflow-x: auto; padding: 20px 32px 32px; }
+.board-wrap { flex: 1; overflow-x: auto; padding: 20px 32px 32px; transition: background .15s; }
+/* "Tarefas Destinadas" usa um tom diferente do quadro padrão (mesma paleta
+   verde), só pra deixar visualmente claro que não é o mesmo painel de "Minhas Tarefas". */
+.board-wrap.board-destinadas { background: #dcefe1; }
+.board-wrap.board-destinadas .column { background: #cbe6d2; }
 .board { display: flex; gap: 16px; align-items: flex-start; }
 .column {
   background: #e9f3ea; border-radius: 12px; width: 288px; flex-shrink: 0;
@@ -879,8 +883,8 @@ textarea { resize: vertical; min-height: 60px; }
     </div>
     <div class="modal-footer">
       <button class="btn btn-danger" id="btnExcluirTarefa" style="display:none;margin-right:auto">Excluir tarefa</button>
-      <select id="tMoverParaSelect" style="display:none;max-width:170px"></select>
       <button class="btn" id="btnMoverPara" style="display:none">Mover para</button>
+      <select id="tMoverParaSelect" style="display:none;max-width:170px"></select>
       <button class="btn" data-close>Cancelar</button>
       <button class="btn btn-primary" id="btnSalvarTarefa">Salvar</button>
     </div>
@@ -1413,15 +1417,27 @@ function registrarDiffTarefa(antes, depois){
 /* ═══════════════════════ RENDER: FILTROS (BARRA LATERAL) ═══════════════════════ */
 let filtroDeptoId = '';
 let filtroUsuarioId = '';
+let filtroReuniaoId = '';
 let filtroPrioridade = '';
 let filtroRelatorioReuniaoId = '';
 /* Único controle de "painel" ativo (visão exclusiva) — evita que seleções
    acumulem (ex.: abrir um relatório e depois clicar em "Minhas Tarefas" tem
-   que trocar de painel, não empilhar filtros). Filtros de departamento,
-   responsável, prioridade e busca continuam ortogonais e se aplicam dentro
-   do painel ativo, qualquer que ele seja. */
+   que trocar de painel, não empilhar filtros). Prioridade e busca continuam
+   ortogonais e se aplicam dentro do painel ativo, qualquer que ele seja. */
 let viewMode = 'quadro'; // 'quadro' | 'destinadas' | 'arquivo' | 'relatorio'
 const RELATORIO_GERAL = '__geral__';
+
+/* Todo clique num "card" da barra lateral (departamento, responsável, reunião,
+   Minhas Tarefas, Tarefas Destinadas, Arquivo, Relatório) ativa exclusivamente
+   aquela seleção — nunca acumula com uma seleção anterior. Cada chamada define
+   o conjunto completo de filtros/visão; o que não for passado volta a vazio/padrão. */
+function selecionarFiltroExclusivo({ depto = '', usuario = '', reuniao = '', view = 'quadro', relatorioReuniaoId = '' } = {}){
+  filtroDeptoId = depto;
+  filtroUsuarioId = usuario;
+  filtroReuniaoId = reuniao;
+  filtroRelatorioReuniaoId = relatorioReuniaoId;
+  viewMode = view;
+}
 
 /* Tarefas que EU criei e destinei a outra pessoa (exclui as que destinei a mim mesmo). */
 function tarefasDestinadas(){
@@ -1483,19 +1499,29 @@ function renderSidebar(){
   `).join('');
 
   boxReunioes.querySelectorAll('[data-reuniao]').forEach(el => el.addEventListener('click', () => {
+    const id = el.dataset.reuniao;
+    // Abre a reunião para edição E mostra as tarefas dela no quadro (visão
+    // exclusiva, como qualquer outro card) — ao fechar o modal, o quadro já
+    // está filtrado por essa reunião.
+    selecionarFiltroExclusivo({ reuniao: id });
+    render();
     renderReuniaoList();
-    abrirEdicaoReuniao(el.dataset.reuniao);
+    abrirEdicaoReuniao(id);
     abrirModal(document.getElementById('modalReuniao'));
   }));
   boxDeptos.querySelectorAll('[data-depto]').forEach(el => el.addEventListener('click', () => {
-    filtroDeptoId = (filtroDeptoId === el.dataset.depto) ? '' : el.dataset.depto; render();
+    const novo = (filtroDeptoId === el.dataset.depto) ? '' : el.dataset.depto;
+    selecionarFiltroExclusivo({ depto: novo });
+    render();
   }));
   boxUsuarios.querySelectorAll('[data-usuario]').forEach(el => el.addEventListener('click', () => {
-    filtroUsuarioId = (filtroUsuarioId === el.dataset.usuario) ? '' : el.dataset.usuario; render();
+    const novo = (filtroUsuarioId === el.dataset.usuario) ? '' : el.dataset.usuario;
+    selecionarFiltroExclusivo({ usuario: novo });
+    render();
   }));
   boxRelatorios.querySelectorAll('[data-relatorioreuniao]').forEach(el => el.addEventListener('click', () => {
-    filtroRelatorioReuniaoId = (filtroRelatorioReuniaoId === el.dataset.relatorioreuniao) ? '' : el.dataset.relatorioreuniao;
-    viewMode = filtroRelatorioReuniaoId ? 'relatorio' : 'quadro';
+    const novo = (filtroRelatorioReuniaoId === el.dataset.relatorioreuniao) ? '' : el.dataset.relatorioreuniao;
+    selecionarFiltroExclusivo(novo ? { view: 'relatorio', relatorioReuniaoId: novo } : {});
     render();
   }));
 
@@ -1525,6 +1551,7 @@ function tarefasFiltradas(){
   const busca = document.getElementById('filterBusca').value.trim().toLowerCase();
   return state.tarefas.filter(t => {
     if (t.arquivada) return false;
+    if (filtroReuniaoId && t.reuniaoId !== filtroReuniaoId) return false;
     if (filtroDeptoId && t.departamentoId !== filtroDeptoId) return false;
     if (filtroUsuarioId && t.responsavelId !== filtroUsuarioId) return false;
     if (filtroPrioridade && t.prioridade !== filtroPrioridade) return false;
@@ -1553,6 +1580,9 @@ function isOverdue(t){
 function render(){
   renderSidebar();
   const filtroPrioridadeEl = document.getElementById('priorityFilter');
+  // Cor de fundo diferenciada (mesma paleta) quando a visão ativa é "Tarefas
+  // Destinadas", pra ficar claro visualmente que não é o mesmo quadro de "Minhas Tarefas".
+  document.querySelector('.board-wrap').classList.toggle('board-destinadas', viewMode === 'destinadas');
 
   if (viewMode === 'arquivo') {
     filtroPrioridadeEl.style.display = '';
@@ -1569,7 +1599,13 @@ function render(){
     renderQuadro(tarefasDestinadas(), 'Tarefas Destinadas');
     return;
   }
-  const titulo = (filtroUsuarioId && filtroUsuarioId === state.config.currentUserId) ? 'Minhas Tarefas' : 'Quadro de Tarefas';
+  let titulo = 'Quadro de Tarefas';
+  if (filtroReuniaoId) {
+    const r = reuniao(filtroReuniaoId);
+    titulo = 'Tarefas da reunião — ' + (r ? r.titulo : '');
+  } else if (filtroUsuarioId && filtroUsuarioId === state.config.currentUserId) {
+    titulo = 'Minhas Tarefas';
+  }
   renderQuadro(tarefasFiltradas(), titulo);
 }
 
@@ -2315,7 +2351,7 @@ document.getElementById('btnAddChecklistItem').addEventListener('click', () => {
 /* ═══════════════════════ ITENS DA NOVA REUNIÃO (com autocompletar) ═══════════════════════ */
 let reuniaoItensTemp = [];
 function novoItemReuniao(){
-  return { id: uid('ri'), departamentoId: '', departamentoTexto: '', responsavelId: '', responsavelTexto: '', titulo: '', descricao: '', prazo: '' };
+  return { id: uid('ri'), tarefaId: '', departamentoId: '', departamentoTexto: '', responsavelId: '', responsavelTexto: '', titulo: '', descricao: '', prazo: '' };
 }
 
 function normalizarTexto(s){
@@ -2381,9 +2417,29 @@ function renderReuniaoItens(){
     item.responsavelId = match ? match.id : '';
   }));
   box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => {
-    reuniaoItensTemp = reuniaoItensTemp.filter(i=>i.id!==b.dataset.del);
-    if (!reuniaoItensTemp.length) reuniaoItensTemp.push(novoItemReuniao());
-    renderReuniaoItens();
+    const item = reuniaoItensTemp.find(i=>i.id===b.dataset.del);
+    const removerDaListaTemp = () => {
+      reuniaoItensTemp = reuniaoItensTemp.filter(i=>i.id!==b.dataset.del);
+      if (!reuniaoItensTemp.length) reuniaoItensTemp.push(novoItemReuniao());
+      renderReuniaoItens();
+    };
+    // Item já é uma tarefa existente (editando a reunião) — remover da lista
+    // aqui exclui a tarefa de verdade, então pede confirmação antes.
+    if (item && item.tarefaId) {
+      abrirConfirm('Excluir tarefa', `Tem certeza que deseja excluir a tarefa "${item.titulo}"? Essa ação não pode ser desfeita.`, () => {
+        state.tarefas = state.tarefas.filter(t=>t.id!==item.tarefaId);
+        registrarHistorico('tarefa', item.tarefaId, 'excluir', `Tarefa excluída ao editar a reunião: "${item.titulo}"`);
+        persistir();
+        api.enviar('removerTarefa', { id: item.tarefaId });
+        removerDaListaTemp();
+        render();
+        // fecharModais() do botão de confirmação fecharia também o modal da
+        // reunião por baixo — reabre em seguida pra continuar a edição.
+        setTimeout(() => abrirModal(document.getElementById('modalReuniao')), 0);
+      });
+      return;
+    }
+    removerDaListaTemp();
   }));
 }
 
@@ -2796,6 +2852,12 @@ function renderReuniaoList(){
   }));
 }
 
+const TEXTO_AJUDA_NOVA_REUNIAO = 'Registre a reunião e cadastre os itens de ação já com departamento, responsável e prazo. Digite as primeiras letras em Departamento ou Responsável para preencher automaticamente e use Tab para avançar entre os campos.';
+const TEXTO_AJUDA_EDITAR_REUNIAO = 'Edite os itens de ação desta reunião: altere departamento, responsável, prazo, descrição ou nome, adicione novos itens (+ Adicionar item) ou remova (✕) os que não são mais necessários — a tarefa correspondente é excluída de verdade.';
+
+/* Abre a reunião para edição completa: nome, data E os itens de ação (as
+   tarefas ligadas a ela), pra poder editar/adicionar/remover tarefas sem
+   precisar sair do painel da reunião. */
 function abrirEdicaoReuniao(id){
   const r = reuniao(id);
   if (!r) return;
@@ -2803,10 +2865,25 @@ function abrirEdicaoReuniao(id){
   document.getElementById('reuniaoTitulo').value = r.titulo || '';
   document.getElementById('reuniaoData').value = r.data || '';
   document.getElementById('reuniaoFormTitulo').textContent = 'Editar reunião — ' + r.titulo;
-  document.getElementById('reuniaoHelpText').style.display = 'none';
-  document.getElementById('reuniaoItensSection').style.display = 'none';
+  document.getElementById('reuniaoHelpText').textContent = TEXTO_AJUDA_EDITAR_REUNIAO;
+  document.getElementById('reuniaoHelpText').style.display = '';
+  document.getElementById('reuniaoItensSection').style.display = '';
   document.getElementById('btnCriarReuniao').textContent = 'Salvar alterações';
   document.getElementById('btnCancelarEdicaoReuniao').style.display = '';
+
+  const tarefasDaReuniao = state.tarefas.filter(t => t.reuniaoId === id && !t.arquivada);
+  reuniaoItensTemp = tarefasDaReuniao.map(t => {
+    const dp = depto(t.departamentoId);
+    const resp = usuario(t.responsavelId);
+    return {
+      id: uid('ri'), tarefaId: t.id,
+      departamentoId: t.departamentoId || '', departamentoTexto: dp ? dp.nome : '',
+      responsavelId: t.responsavelId || '', responsavelTexto: resp ? resp.nome : '',
+      titulo: t.titulo || '', descricao: t.descricao || '', prazo: t.prazo || ''
+    };
+  });
+  if (!reuniaoItensTemp.length) reuniaoItensTemp.push(novoItemReuniao());
+  renderReuniaoItens();
 }
 
 function resetFormularioReuniao(){
@@ -2814,6 +2891,7 @@ function resetFormularioReuniao(){
   document.getElementById('reuniaoTitulo').value = '';
   document.getElementById('reuniaoData').value = todayISO();
   document.getElementById('reuniaoFormTitulo').textContent = 'Nova reunião — Checklist';
+  document.getElementById('reuniaoHelpText').textContent = TEXTO_AJUDA_NOVA_REUNIAO;
   document.getElementById('reuniaoHelpText').style.display = '';
   document.getElementById('reuniaoItensSection').style.display = '';
   document.getElementById('btnCriarReuniao').textContent = 'Criar reunião e tarefas';
@@ -2829,20 +2907,6 @@ document.getElementById('btnCriarReuniao').addEventListener('click', () => {
   if (!titulo) { toast('Informe o título da reunião.', true); return; }
   const data = document.getElementById('reuniaoData').value || todayISO();
 
-  if (reuniaoEmEdicaoId) {
-    const r = reuniao(reuniaoEmEdicaoId);
-    if (!r) { resetFormularioReuniao(); return; }
-    r.titulo = titulo;
-    r.data = data;
-    persistir();
-    api.enviar('salvarReuniao', { dado: r });
-    resetFormularioReuniao();
-    renderReuniaoList();
-    render();
-    toast('Reunião atualizada.');
-    return;
-  }
-
   const itensPreenchidos = reuniaoItensTemp.filter(i =>
     i.titulo.trim() || i.descricao.trim() || i.departamentoTexto.trim() || i.responsavelTexto.trim() || i.prazo
   );
@@ -2851,6 +2915,53 @@ document.getElementById('btnCriarReuniao').addEventListener('click', () => {
     if (!item.departamentoId) { toast(`Departamento inválido no item "${item.titulo}".`, true); return; }
     if (!item.responsavelId) { toast(`Responsável inválido no item "${item.titulo}".`, true); return; }
     if (!item.prazo) { toast(`Informe o prazo do item "${item.titulo}".`, true); return; }
+  }
+
+  if (reuniaoEmEdicaoId) {
+    const r = reuniao(reuniaoEmEdicaoId);
+    if (!r) { resetFormularioReuniao(); return; }
+    r.titulo = titulo;
+    r.data = data;
+    api.enviar('salvarReuniao', { dado: r });
+
+    const primeiraColunaEdicao = [...state.colunas].sort((a,b)=>a.ordem-b.ordem)[0];
+    let criadas = 0, editadas = 0;
+    itensPreenchidos.forEach((item, idx) => {
+      if (item.tarefaId) {
+        const t = state.tarefas.find(x=>x.id===item.tarefaId);
+        if (!t) return;
+        const antes = JSON.parse(JSON.stringify(t));
+        t.titulo = item.titulo.trim();
+        t.descricao = item.descricao.trim();
+        t.departamentoId = item.departamentoId;
+        t.responsavelId = item.responsavelId;
+        t.prazo = item.prazo;
+        api.enviar('salvarTarefa', { dado: t });
+        registrarDiffTarefa(antes, t);
+        editadas++;
+      } else {
+        const t = {
+          id: uid('t'), titulo: item.titulo.trim(), descricao: item.descricao.trim(),
+          departamentoId: item.departamentoId, responsavelId: item.responsavelId,
+          colunaId: primeiraColunaEdicao.id, prioridade: 'media', prazo: item.prazo, reuniaoId: r.id,
+          criadoPor: state.config.currentUserId, criadoEm: todayISO(), concluidoEm: null,
+          ordem: state.tarefas.filter(x=>x.colunaId===primeiraColunaEdicao.id).length + idx, checklist: [],
+          comentarios: [], recorrencia: { tipo: 'nenhuma' }, ultimaGeracaoEm: '',
+          arquivada: false, arquivadaEm: null
+        };
+        state.tarefas.push(t);
+        api.enviar('salvarTarefa', { dado: t });
+        registrarHistorico('tarefa', t.id, 'criar', `Tarefa criada ao editar a reunião "${r.titulo}": "${t.titulo}"`);
+        criadas++;
+      }
+    });
+    persistir();
+    sincronizarArquivamentoReuniao(r.id);
+    resetFormularioReuniao();
+    renderReuniaoList();
+    render();
+    toast(`Reunião atualizada (${editadas} tarefa(s) editada(s), ${criadas} nova(s)).`);
+    return;
   }
 
   const r = { id: uid('r'), titulo, data, arquivada: false, arquivadaEm: null };
@@ -3093,17 +3204,16 @@ document.getElementById('sidebarActionNovoUsuario').addEventListener('click', ()
 document.getElementById('sidebarActionNovaReuniao').addEventListener('click', abrirModalReuniao);
 document.getElementById('btnNovaTarefa').addEventListener('click', () => abrirModalTarefa(null));
 document.getElementById('btnMinhasTarefas').addEventListener('click', () => {
-  viewMode = 'quadro';
-  filtroUsuarioId = state.config.currentUserId || '';
+  selecionarFiltroExclusivo({ usuario: state.config.currentUserId || '' });
   render();
 });
 document.getElementById('btnTarefasDestinadas').addEventListener('click', () => {
-  viewMode = 'destinadas';
+  selecionarFiltroExclusivo({ view: 'destinadas' });
   limparAlertasDestinadas();
   render();
 });
 document.getElementById('btnFiltroArquivo').addEventListener('click', () => {
-  viewMode = viewMode === 'arquivo' ? 'quadro' : 'arquivo';
+  selecionarFiltroExclusivo(viewMode === 'arquivo' ? {} : { view: 'arquivo' });
   render();
 });
 
