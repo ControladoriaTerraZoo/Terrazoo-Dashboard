@@ -2450,8 +2450,15 @@ function aplicarVisibilidadeCamposUsuario(){
   document.getElementById('usrSenhaAjuda').textContent = usuarioEmEdicaoId
     ? 'Preencha somente se quiser redefinir a senha deste responsável.'
     : 'Defina a senha inicial deste responsável. Ele deverá trocá-la no primeiro acesso.';
-  // cadastrar novo usuário/responsável é restrito a administradores; editar um já existente não.
-  document.getElementById('btnAddUsuario').disabled = !usuarioEmEdicaoId && !souAdmin();
+  // Cadastrar novo usuário/responsável é restrito a administradores — nesse caso,
+  // bloqueia a digitação em todos os campos (não só o botão de salvar), pra ficar
+  // claro que a ação não é permitida, em vez de deixar digitar e só falhar ao salvar.
+  const bloqueadoParaCriar = !usuarioEmEdicaoId && !souAdmin();
+  document.getElementById('btnAddUsuario').disabled = bloqueadoParaCriar;
+  ['usrNome','usrEmail','usrDepto','usrCargoFuncao','usrSenha'].forEach(id => {
+    document.getElementById(id).disabled = bloqueadoParaCriar;
+  });
+  document.getElementById('usrCargoPermissao').disabled = bloqueadoParaCriar || !souAdmin();
 }
 
 function abrirEdicaoUsuario(id){
@@ -2466,7 +2473,6 @@ function abrirEdicaoUsuario(id){
   document.getElementById('usrEmail').value = u.email || '';
   document.getElementById('usrDepto').value = u.departamentoId || '';
   document.getElementById('usrCargoPermissao').value = u.cargo || 'membro';
-  document.getElementById('usrCargoPermissao').disabled = !souAdmin();
   document.getElementById('usrCargoFuncao').value = u.funcao || '';
   document.getElementById('usrSenha').value = '';
   document.getElementById('usrFormTitulo').textContent = rotulosAtuais().editar(u.nome);
@@ -2481,7 +2487,6 @@ function resetFormularioUsuario(){
   ['usrNome','usrEmail','usrCargoFuncao','usrSenha'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('usrDepto').value = '';
   document.getElementById('usrCargoPermissao').value = 'membro';
-  document.getElementById('usrCargoPermissao').disabled = !souAdmin();
   document.getElementById('usrFormTitulo').textContent = R.novo;
   document.getElementById('btnAddUsuario').textContent = R.add;
   document.getElementById('btnCancelarEdicaoUsuario').style.display = 'none';
