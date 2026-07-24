@@ -461,6 +461,23 @@ textarea { resize: vertical; min-height: 60px; }
 }
 .notify-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
 
+/* ── ANEXOS (arraste-e-solte ou upload) ── */
+.anexo-dropzone {
+  border: 2px dashed var(--borda); border-radius: 9px; padding: 16px; text-align: center;
+  color: var(--muted); font-size: 12.5px; cursor: pointer; transition: all .15s; margin-bottom: 8px;
+}
+.anexo-dropzone:hover, .anexo-dropzone.drag-over { border-color: var(--v3); background: var(--v6); color: var(--v1); }
+.anexo-list { display: flex; flex-direction: column; gap: 6px; }
+.anexo-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px; border: 1px solid var(--borda);
+  border-radius: 7px; font-size: 12.5px;
+}
+.anexo-item a { color: var(--v2); font-weight: 600; text-decoration: none; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anexo-item a:hover { text-decoration: underline; }
+.anexo-item-tamanho { color: var(--muted); font-size: 11px; flex-shrink: 0; }
+.anexo-item button { background: none; border: none; color: var(--danger); font-size: 15px; cursor: pointer; padding: 0; flex-shrink: 0; }
+.anexo-item.enviando { opacity: .6; }
+
 .list-row {
   display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--borda);
   border-radius: 8px; margin-bottom: 8px;
@@ -810,6 +827,12 @@ textarea { resize: vertical; min-height: 60px; }
         <label>Descrição</label>
         <textarea id="tDescricao" placeholder="Detalhes, contexto da reunião, links..."></textarea>
       </div>
+      <div class="form-group">
+        <label>Anexos</label>
+        <div class="anexo-dropzone" id="tAnexoDropzone">📎 Arraste arquivos aqui ou clique para enviar (até 5&nbsp;MB cada)</div>
+        <input type="file" id="tAnexoInput" multiple style="display:none"/>
+        <div class="anexo-list" id="tAnexosList"></div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label>Departamento</label>
@@ -861,13 +884,6 @@ textarea { resize: vertical; min-height: 60px; }
         <div id="tChecklistItems"></div>
         <button class="btn btn-sm" id="btnAddChecklistItem">+ Adicionar item</button>
       </div>
-      <div class="form-group" id="tNotifyBox" style="display:none">
-        <label>Notificar responsável</label>
-        <div class="notify-row">
-          <button class="btn btn-sm" id="btnNotifyEmail">✉️ Enviar e-mail</button>
-        </div>
-        <div class="help-text">O e-mail abre seu cliente de e-mail padrão com a mensagem pronta (ou é enviado automaticamente se o backend estiver configurado).</div>
-      </div>
       <div class="form-group" id="tComentariosBox" style="display:none">
         <label>Comentários</label>
         <div class="comentarios-list" id="tComentariosList"></div>
@@ -875,6 +891,13 @@ textarea { resize: vertical; min-height: 60px; }
           <input type="text" id="tNovoComentario" placeholder="Escreva um comentário..." style="flex:1"/>
           <button class="btn btn-sm btn-primary" id="btnEnviarComentario">Enviar</button>
         </div>
+      </div>
+      <div class="form-group" id="tNotifyBox" style="display:none">
+        <label>Notificar responsável</label>
+        <div class="notify-row">
+          <button class="btn btn-sm" id="btnNotifyEmail">✉️ Enviar e-mail</button>
+        </div>
+        <div class="help-text">Envia um e-mail ao responsável avisando sobre a alteração feita nesta tarefa (ou abre seu cliente de e-mail padrão com a mensagem pronta, se o backend não estiver configurado).</div>
       </div>
       <div class="form-group" id="tHistoricoBox" style="display:none">
         <label>Histórico</label>
@@ -1372,6 +1395,10 @@ function usuarioAtual(){ return usuario(state.config.currentUserId); }
 function responsaveisSelecionaveis(){ return state.usuarios.filter(u => u.ativo !== false); }
 function nomeExibicaoUsuario(u){ return (u.master ? '🔑 ' : '') + u.nome; }
 function souAdmin(){ const u = usuarioAtual(); return !!(u && u.cargo === 'admin'); }
+/* Ajustes estruturais do quadro (marcar coluna de conclusão, limite de WIP,
+   excluir coluna) ficam restritos ao usuário master — nem todo admin/gestor
+   deveria poder remexer na estrutura das colunas do quadro da empresa toda. */
+function souMaster(){ const u = usuarioAtual(); return !!(u && u.master); }
 
 /* ═══════════════════════ TRILHA DE AUDITORIA ═══════════════════════ */
 function formatarDataHora(iso){
@@ -1633,7 +1660,7 @@ function renderQuadro(tarefas, titulo){
       <span class="col-final-flag">${col.final ? '✅' : ''}</span>
       <input class="col-name" value="${escapeHtml(col.nome)}" data-col="${col.id}"/>
       <span class="col-count ${estourouWip?'col-count-over':''}" title="${estourouWip?'Limite de WIP excedido':''}">${contagem}${col.limite>0?'/'+col.limite:''}</span>
-      <button class="col-menu-btn" data-colmenu="${col.id}">⋮</button>
+      ${souMaster() ? `<button class="col-menu-btn" data-colmenu="${col.id}">⋮</button>` : ''}
     `;
     wrap.appendChild(header);
 
@@ -1677,6 +1704,8 @@ function formatarPercentual(pct){
 
 function renderRelatorio(reuniaoId){
   const board = document.getElementById('board');
+  // Reforço: a cor diferenciada é só do quadro de "Tarefas Destinadas" — nunca do relatório.
+  document.querySelector('.board-wrap').classList.remove('board-destinadas');
   const geral = reuniaoId === RELATORIO_GERAL;
   const reu = geral ? null : reuniao(reuniaoId);
   document.getElementById('boardTitleRow').textContent = geral ? 'Relatório — Todas as Tarefas' : (reu ? `Relatório — ${reu.titulo}` : 'Relatório');
@@ -1883,6 +1912,8 @@ function htmlTarefasArquivadasPorResponsavel(lista){
    cada tarefa individualmente, mesmo quando o responsável se repete. */
 function renderArquivo(){
   const board = document.getElementById('board');
+  // Reforço: a cor diferenciada é só do quadro de "Tarefas Destinadas" — nunca do arquivo.
+  document.querySelector('.board-wrap').classList.remove('board-destinadas');
   document.getElementById('boardTitleRow').textContent = 'Arquivo';
   const busca = document.getElementById('filterBusca').value.trim().toLowerCase();
 
@@ -2152,6 +2183,7 @@ function elementoAposCursor(container, y){
 }
 
 function abrirMenuColuna(colId, btnEl){
+  if (!souMaster()) { toast('Somente o usuário master pode alterar a estrutura das colunas.', true); return; }
   const c = coluna(colId);
   const acoes = [
     c.final ? 'Desmarcar como coluna de conclusão' : 'Marcar como coluna de conclusão',
@@ -2181,6 +2213,94 @@ function abrirMenuColuna(colId, btnEl){
 /* ═══════════════════════ MODAL: TAREFA ═══════════════════════ */
 let tarefaEmEdicaoId = null;
 let checklistTemp = [];
+let anexosTemp = [];
+const TAMANHO_MAX_ANEXO = 5 * 1024 * 1024; // 5 MB — mantém o POST (base64) num tamanho razoável para o Apps Script
+
+function formatarTamanhoArquivo(bytes){
+  if (!bytes) return '0 KB';
+  if (bytes < 1024*1024) return Math.max(1, Math.round(bytes/1024)) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function renderAnexosTemp(){
+  const box = document.getElementById('tAnexosList');
+  box.innerHTML = anexosTemp.map(a => `
+    <div class="anexo-item ${a.enviando ? 'enviando' : ''}" data-anexo="${a.id}">
+      ${a.url ? `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">📎 ${escapeHtml(a.nome)}</a>` : `<span>📎 ${escapeHtml(a.nome)} — enviando...</span>`}
+      ${a.tamanho ? `<span class="anexo-item-tamanho">${formatarTamanhoArquivo(a.tamanho)}</span>` : ''}
+      ${a.enviando ? '' : `<button type="button" data-delanexo="${a.id}" title="Remover anexo">✕</button>`}
+    </div>
+  `).join('');
+  box.querySelectorAll('[data-delanexo]').forEach(b => b.addEventListener('click', () => {
+    anexosTemp = anexosTemp.filter(a => a.id !== b.dataset.delanexo);
+    renderAnexosTemp();
+  }));
+}
+
+function arquivoParaBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',').pop());
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* Envia cada arquivo pro backend (Apps Script salva no Google Drive e devolve
+   um link) assim que é solto/selecionado — não espera o "Salvar" da tarefa,
+   igual ao padrão já usado em outras ações imediatas do app. */
+async function processarArquivosSelecionados(fileList){
+  const arquivos = [...fileList];
+  for (const file of arquivos) {
+    if (file.size > TAMANHO_MAX_ANEXO) {
+      toast(`"${file.name}" excede o limite de 5 MB e não foi enviado.`, true);
+      continue;
+    }
+    if (!api.remoto) {
+      toast('Configure o backend (Apps Script) para poder anexar arquivos.', true);
+      continue;
+    }
+    const placeholder = { id: uid('an'), nome: file.name, tamanho: file.size, tipo: file.type, url: '', enviando: true };
+    anexosTemp.push(placeholder);
+    renderAnexosTemp();
+    try {
+      const conteudoBase64 = await arquivoParaBase64(file);
+      const resp = await api.enviar('uploadAnexo', { nome: file.name, tipo: file.type, tamanho: file.size, conteudoBase64 });
+      const idx = anexosTemp.findIndex(a => a.id === placeholder.id);
+      if (idx === -1) continue; // usuário removeu enquanto enviava
+      if (resp && resp.ok && resp.anexo) {
+        anexosTemp[idx] = { id: placeholder.id, nome: resp.anexo.nome || file.name, tamanho: file.size, tipo: file.type, url: resp.anexo.url };
+        toast(`"${file.name}" anexado.`);
+      } else {
+        anexosTemp.splice(idx, 1);
+        toast(`Falha ao enviar "${file.name}".`, true);
+      }
+    } catch (e) {
+      anexosTemp = anexosTemp.filter(a => a.id !== placeholder.id);
+      toast(`Falha ao enviar "${file.name}".`, true);
+    }
+    renderAnexosTemp();
+  }
+}
+
+const tAnexoDropzone = document.getElementById('tAnexoDropzone');
+const tAnexoInput = document.getElementById('tAnexoInput');
+tAnexoDropzone.addEventListener('click', () => tAnexoInput.click());
+tAnexoInput.addEventListener('change', () => {
+  if (tAnexoInput.files.length) processarArquivosSelecionados(tAnexoInput.files);
+  tAnexoInput.value = '';
+});
+['dragenter','dragover'].forEach(evt => tAnexoDropzone.addEventListener(evt, e => {
+  e.preventDefault(); e.stopPropagation();
+  tAnexoDropzone.classList.add('drag-over');
+}));
+['dragleave','drop'].forEach(evt => tAnexoDropzone.addEventListener(evt, e => {
+  e.preventDefault(); e.stopPropagation();
+  tAnexoDropzone.classList.remove('drag-over');
+}));
+tAnexoDropzone.addEventListener('drop', e => {
+  if (e.dataTransfer.files.length) processarArquivosSelecionados(e.dataTransfer.files);
+});
 
 function preencherSelectsTarefa(){
   const dSel = document.getElementById('tDepto');
@@ -2219,6 +2339,7 @@ function abrirModalTarefa(taskId, colunaPadrao){
     document.getElementById('tRecorrenciaDia').value = (t.recorrencia && t.recorrencia.diaBase) || '';
     document.getElementById('tRecorrenciaDiaBox').style.display = document.getElementById('tRecorrenciaTipo').value === 'mensal' ? '' : 'none';
     checklistTemp = JSON.parse(JSON.stringify(t.checklist || []));
+    anexosTemp = JSON.parse(JSON.stringify(t.anexos || []));
     // Membro só pode excluir tarefas que ele mesmo criou — não as que apenas
     // foram destinadas a ele por outra pessoa. Admin/master sempre pode.
     const podeExcluir = souAdmin() || t.criadoPor === state.config.currentUserId;
@@ -2247,6 +2368,7 @@ function abrirModalTarefa(taskId, colunaPadrao){
     document.getElementById('tRecorrenciaDia').value = '';
     document.getElementById('tRecorrenciaDiaBox').style.display = 'none';
     checklistTemp = [];
+    anexosTemp = [];
     btnExcluir.style.display = 'none';
     notifyBox.style.display = 'none';
     comentariosBox.style.display = 'none';
@@ -2255,6 +2377,7 @@ function abrirModalTarefa(taskId, colunaPadrao){
     btnMoverPara.style.display = 'none';
   }
   renderChecklistTemp();
+  renderAnexosTemp();
   abrirModal(modal);
 }
 
@@ -2264,7 +2387,11 @@ document.getElementById('btnMoverPara').addEventListener('click', () => {
   if (!t || !novaColId) return;
   const nomeColuna = coluna(novaColId) ? coluna(novaColId).nome : '';
   moverTarefaParaColunaBotao(t, novaColId);
-  fecharModais();
+  // Fecha só o modal da tarefa — mover pode disparar a pergunta "Arquivar
+  // tarefas concluídas?" (verificarArquivamentoAutomatico); usar
+  // fecharModais() aqui fechava esse aviso instantaneamente, sem dar tempo
+  // de responder, e parecia que a tarefa não tinha sido movida.
+  document.getElementById('modalTarefa').classList.remove('open');
   toast(`Tarefa movida para "${nomeColuna}".`);
 });
 
@@ -2448,12 +2575,16 @@ document.getElementById('btnAddReuniaoItem').addEventListener('click', () => {
   renderReuniaoItens();
 });
 
-document.getElementById('btnSalvarTarefa').addEventListener('click', () => {
+/* Valida e grava o formulário atual (criação ou edição) sem decidir o que
+   fazer depois (fechar modal, mandar e-mail, etc.) — usado pelo botão
+   "Salvar" e também por "Enviar e-mail", que precisa persistir a alteração
+   antes de notificar (senão o backend reenviaria os dados antigos). */
+function salvarFormularioTarefaAtual(){
   const titulo = document.getElementById('tTitulo').value.trim();
-  if (!titulo) { toast('Informe um título para a tarefa.', true); return; }
-  if (!document.getElementById('tDepto').value) { toast('Selecione o departamento.', true); return; }
-  if (!document.getElementById('tResponsavel').value) { toast('Selecione o responsável.', true); return; }
-  if (!document.getElementById('tPrazo').value) { toast('Informe o prazo.', true); return; }
+  if (!titulo) { toast('Informe um título para a tarefa.', true); return null; }
+  if (!document.getElementById('tDepto').value) { toast('Selecione o departamento.', true); return null; }
+  if (!document.getElementById('tResponsavel').value) { toast('Selecione o responsável.', true); return null; }
+  if (!document.getElementById('tPrazo').value) { toast('Informe o prazo.', true); return null; }
 
   const existente = tarefaEmEdicaoId ? state.tarefas.find(t=>t.id===tarefaEmEdicaoId) : null;
   const antes = existente ? JSON.parse(JSON.stringify(existente)) : null;
@@ -2475,6 +2606,7 @@ document.getElementById('btnSalvarTarefa').addEventListener('click', () => {
     prazo: document.getElementById('tPrazo').value,
     reuniaoId: document.getElementById('tReuniao').value,
     checklist: checklistTemp,
+    anexos: anexosTemp.filter(a => !a.enviando),
     recorrencia,
     ultimaGeracaoEm: existente ? (existente.ultimaGeracaoEm || '') : '',
     comentarios: existente ? (existente.comentarios || []) : [],
@@ -2494,6 +2626,7 @@ document.getElementById('btnSalvarTarefa').addEventListener('click', () => {
     state.tarefas[idx] = dado;
   } else {
     state.tarefas.push(dado);
+    tarefaEmEdicaoId = dado.id;
   }
   persistir();
   api.enviar('salvarTarefa', { dado });
@@ -2504,12 +2637,16 @@ document.getElementById('btnSalvarTarefa').addEventListener('click', () => {
   if (existente && existente.reuniaoId && existente.reuniaoId !== dado.reuniaoId) sincronizarArquivamentoReuniao(existente.reuniaoId);
   sincronizarArquivamentoReuniao(dado.reuniaoId);
 
+  return { dado, colunaNovaFinal, colunaAnteriorFinal };
+}
+
+document.getElementById('btnSalvarTarefa').addEventListener('click', () => {
+  const resultado = salvarFormularioTarefaAtual();
+  if (!resultado) return;
   fecharModais();
   render();
-
   toast('Tarefa salva com sucesso.');
-
-  if (colunaNovaFinal && !colunaAnteriorFinal) verificarArquivamentoAutomatico(dado);
+  if (resultado.colunaNovaFinal && !resultado.colunaAnteriorFinal) verificarArquivamentoAutomatico(resultado.dado);
 });
 
 document.getElementById('btnExcluirTarefa').addEventListener('click', () => {
@@ -2531,49 +2668,56 @@ document.getElementById('btnExcluirTarefa').addEventListener('click', () => {
 });
 
 document.getElementById('btnNotifyEmail').addEventListener('click', () => {
-  const t = montarTarefaFormAtual();
-  enviarEmail(t);
+  if (!tarefaEmEdicaoId) return;
+  // Salva a alteração feita no formulário ANTES de notificar — senão o
+  // backend reenviaria o e-mail com o que já estava salvo, ignorando a
+  // edição que acabou de ser feita na tela (ex.: campo alterado, comentário).
+  const resultado = salvarFormularioTarefaAtual();
+  if (!resultado) return;
+  render();
+  enviarEmail(resultado.dado, 'alteracao');
 });
-function montarTarefaFormAtual(){
-  return {
-    id: tarefaEmEdicaoId,
-    titulo: document.getElementById('tTitulo').value.trim(),
-    descricao: document.getElementById('tDescricao').value.trim(),
-    departamentoId: document.getElementById('tDepto').value,
-    responsavelId: document.getElementById('tResponsavel').value,
-    prioridade: document.getElementById('tPrioridade').value,
-    prazo: document.getElementById('tPrazo').value,
-  };
-}
 
 /* ═══════════════════════ NOTIFICAÇÕES: E-MAIL ═══════════════════════ */
-function textoNotificacao(t){
+function ultimoComentario(t){
+  if (!t.comentarios || !t.comentarios.length) return null;
+  return [...t.comentarios].sort((a,b)=>b.ts.localeCompare(a.ts))[0];
+}
+
+function textoNotificacao(t, contexto){
   const resp = usuario(t.responsavelId);
   const dp = depto(t.departamentoId);
-  let corpo = `Olá${resp ? ' ' + resp.nome.split(' ')[0] : ''}, você tem uma tarefa no quadro TerraZoo:\n\n`;
+  const ehAlteracao = contexto === 'alteracao';
+  let corpo = `Olá${resp ? ' ' + resp.nome.split(' ')[0] : ''}, ${ehAlteracao ? 'uma tarefa sua foi alterada no quadro TerraZoo' : 'você tem uma tarefa no quadro TerraZoo'}:\n\n`;
   corpo += `Tarefa: ${t.titulo}\n`;
   if (dp) corpo += `Departamento: ${dp.nome}\n`;
   if (t.prioridade) corpo += `Prioridade: ${labelPrioridade(t.prioridade)}\n`;
   if (t.prazo) corpo += `Prazo: ${t.prazo.split('-').reverse().join('/')}\n`;
   if (t.descricao) corpo += `\nDetalhes: ${t.descricao}\n`;
+  const ultimo = ultimoComentario(t);
+  if (ultimo) corpo += `\nÚltimo comentário: ${ultimo.texto}\n`;
   return corpo;
 }
 
-function enviarEmail(t){
+/* contexto: 'alteracao' quando disparado pelo botão "Enviar e-mail" dentro
+   da edição da tarefa (assunto e corpo avisam sobre a mudança feita); sem
+   contexto, é a notificação padrão (usada no ✉️ de atalho do card). */
+function enviarEmail(t, contexto){
   if (!t) return;
   const resp = usuario(t.responsavelId);
   if (!resp || !resp.email) {
     toast('O responsável não tem e-mail cadastrado.', true);
     return;
   }
+  const prefixoAssunto = contexto === 'alteracao' ? 'Alteração da Tarefa: ' : 'Tarefa TerraZoo: ';
   if (api.remoto) {
-    api.enviar('notificarEmail', { id: t.id }).then(r => {
+    api.enviar('notificarEmail', { id: t.id, assuntoPrefixo: prefixoAssunto }).then(r => {
       if (r && r.ok) toast('E-mail enviado automaticamente para ' + resp.nome + '.');
       else toast('Não foi possível enviar o e-mail pelo backend.', true);
     });
   } else {
-    const assunto = encodeURIComponent('Tarefa TerraZoo: ' + t.titulo);
-    const corpo = encodeURIComponent(textoNotificacao(t));
+    const assunto = encodeURIComponent(prefixoAssunto + t.titulo);
+    const corpo = encodeURIComponent(textoNotificacao(t, contexto));
     window.open(`mailto:${resp.email}?subject=${assunto}&body=${corpo}`, '_blank');
     toast('Abrindo seu programa de e-mail para ' + resp.nome + '...');
   }
@@ -2945,7 +3089,7 @@ document.getElementById('btnCriarReuniao').addEventListener('click', () => {
           departamentoId: item.departamentoId, responsavelId: item.responsavelId,
           colunaId: primeiraColunaEdicao.id, prioridade: 'media', prazo: item.prazo, reuniaoId: r.id,
           criadoPor: state.config.currentUserId, criadoEm: todayISO(), concluidoEm: null,
-          ordem: state.tarefas.filter(x=>x.colunaId===primeiraColunaEdicao.id).length + idx, checklist: [],
+          ordem: state.tarefas.filter(x=>x.colunaId===primeiraColunaEdicao.id).length + idx, checklist: [], anexos: [],
           comentarios: [], recorrencia: { tipo: 'nenhuma' }, ultimaGeracaoEm: '',
           arquivada: false, arquivadaEm: null
         };
@@ -2975,7 +3119,7 @@ document.getElementById('btnCriarReuniao').addEventListener('click', () => {
       departamentoId: item.departamentoId, responsavelId: item.responsavelId,
       colunaId: primeiraColuna.id, prioridade: 'media', prazo: item.prazo, reuniaoId: r.id,
       criadoPor: state.config.currentUserId, criadoEm: todayISO(), concluidoEm: null,
-      ordem: state.tarefas.filter(x=>x.colunaId===primeiraColuna.id).length + idx, checklist: [],
+      ordem: state.tarefas.filter(x=>x.colunaId===primeiraColuna.id).length + idx, checklist: [], anexos: [],
       comentarios: [], recorrencia: { tipo: 'nenhuma' }, ultimaGeracaoEm: '',
       arquivada: false, arquivadaEm: null
     };
@@ -3286,7 +3430,7 @@ function gerarTarefasRecorrentes(){
       prazo: `${anoMes}-${String(rec.diaBase).padStart(2,'0')}`, reuniaoId: '',
       criadoPor: t.criadoPor, criadoEm: todayISO(), concluidoEm: null,
       ordem: state.tarefas.filter(x=>x.colunaId===primeiraColuna.id).length,
-      checklist: (t.checklist||[]).map(c => ({ id: uid('ci'), texto: c.texto, feito: false })),
+      checklist: (t.checklist||[]).map(c => ({ id: uid('ci'), texto: c.texto, feito: false })), anexos: [],
       comentarios: [], recorrencia: { tipo: 'nenhuma' }, ultimaGeracaoEm: ''
     };
     state.tarefas.push(nova);
